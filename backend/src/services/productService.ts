@@ -1,4 +1,4 @@
-import { IProduct, Product } from "../models/productModels";
+import { IProduct, Product } from "../models/Product";
 
 interface CreateProductInput {
     name: String;

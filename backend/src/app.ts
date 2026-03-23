@@ -1,0 +1,32 @@
+import express from "express";
+import cors from "cors";
+
+import listingRoutes from "./routes/listingRoutes";
+import productRoutes from "./routes/productRoutes";
+import authRoutes from "./routes/authRoutes";
+import { errorHandler } from "./middleware/errorHandler";
+
+export function createApp() {
+  const app = express();
+
+  app.use(cors());
+  app.use(express.json());
+
+  app.get("/", (req, res) => {
+    res.send("API is running");
+  });
+
+  app.get("/api/health", (req, res) => {
+    res.json({ ok: true, message: "Backend is running" });
+  });
+
+  app.use("/api/auth", authRoutes);
+  app.use("/api/listings", listingRoutes);
+  app.use("/api/products", productRoutes);
+
+  app.use(errorHandler);
+
+  return app;
+}
+
+export default createApp;
