@@ -23,10 +23,34 @@ export const getAllProducts = async (): Promise<IProduct[]> => {
     return products;
 }
 
-export const getProduct = async (productID: Number) => {
-    
+export const getProductByID = async (id: String): Promise<IProduct> => {
+    const product = await Product.findById(id);
+    if (!product) {
+        throw new Error("Product not found");
+    }
+    return product;
 }
 
-export const updateProduct = () => {}
+export const updateProduct = async (
+    id: string,
+    fields: Partial<IProduct>,
+): Promise<IProduct> => {
+    const product = await Product.findByIdAndUpdate(
+        id,
+        { $set: fields },
+        { new: true, runValidators: true },
+    );
 
-export const deleteProduct = () => {}
+    if (!product) {
+        throw new Error("Product not found");
+    }
+
+    return product;
+};
+
+export const deleteProduct = async (id: String): Promise<void> => {
+    const product = await Product.findByIdAndDelete(id);
+    if (!product) {
+        throw new Error("Product not found");
+    }
+}
