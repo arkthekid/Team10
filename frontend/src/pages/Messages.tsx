@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send } from "lucide-react";
+import { Send, CheckCircle } from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 
 interface Message {
@@ -19,6 +19,7 @@ const initialMessages: Message[] = [
 const Messages = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [completed, setCompleted] = useState(false);
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -67,17 +68,28 @@ const Messages = () => {
         </div>
 
         {/* Input */}
-        <div className="border-t p-4 flex gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your message"
-            className="flex-1"
-          />
-          <Button size="icon" onClick={handleSend}>
-            <Send className="w-4 h-4" />
-          </Button>
+        <div className="border-t p-4 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your message"
+              className="flex-1"
+            />
+            <Button size="icon" onClick={handleSend}>
+              <Send className="w-4 h-4" />
+            </Button>
+            <Button
+              variant={completed ? "secondary" : "outline"}
+              size="sm"
+              className={`whitespace-nowrap text-xs ${completed ? "bg-green-600 text-white hover:bg-green-700" : ""}`}
+              onClick={() => setCompleted(!completed)}
+            >
+              <CheckCircle className={`w-4 h-4 mr-1 ${completed ? "text-white" : "text-muted-foreground"}`} />
+              {completed ? "Completed" : "Mark Complete"}
+            </Button>
+          </div>
         </div>
       </main>
     </div>
