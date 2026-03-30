@@ -11,6 +11,7 @@ const listingSchema = new Schema(
     description: { type: String, default: "" },
 
     quantity: { type: Number, required: true, min: 1 },
+    price: { type: Number, required: true },
     status: {
       type: String,
       enum: ["active", "pending", "sold", "removed"],
