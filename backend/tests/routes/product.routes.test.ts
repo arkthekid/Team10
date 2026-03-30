@@ -9,6 +9,15 @@ jest.mock("../../src/controllers/productControllers", () => ({
   getAllProducts: jest.fn((req, res) => {
     res.status(200).json({ message: "Mocked get all products" });
   }),
+  getProductByID: jest.fn((req, res) => {
+    res.status(200).json({ message: "Mocked get product by id" });
+  }),
+  updateProduct: jest.fn((req, res) => {
+    res.status(200).json({ message: "Mocked product updated" });
+  }),
+  deleteProduct: jest.fn((req, res) => {
+    res.status(200).json({ message: "Mocked product deleted" });
+  }),
 }));
 
 describe("Product Routes", () => {
@@ -22,9 +31,7 @@ describe("Product Routes", () => {
       .post("/products")
       .send({
         name: "Test Product",
-        productID: 1,
-        listingID: 2,
-        categoryID: 3,
+        categoryId: "507f1f77bcf86cd799439011",
         price: 100,
       });
 

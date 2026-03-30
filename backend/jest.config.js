@@ -8,4 +8,7 @@ module.exports = {
   transform: {
     ...tsJestTransformCfg,
   },
+  setupFilesAfterEnv: ["<rootDir>/tests/setup.ts"],
+  testMatch: ["**/tests/**/*.test.ts"],
+  testTimeout: 30000,
 };

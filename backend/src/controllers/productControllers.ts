@@ -7,15 +7,13 @@ export const createProduct = async (
     next: NextFunction,
 ) => {
     try {
-        const { name, productID, listingID, categoryID, price } = req.body;
+        const { name, categoryId, price } = req.body;
 
         const product = await productService.createProductService({
-            name,
-            productID, 
-            listingID,
-            categoryID,
-            price
-        })
+        name,
+        categoryId,
+        price,
+        });
 
         res.status(201).json({
             message: "Product created!",

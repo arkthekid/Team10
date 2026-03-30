@@ -21,14 +21,14 @@ async function registerUser(name: string, umassEmail: string) {
 }
 
 async function seedProductAndCategory() {
-  const product = await Product.create({
-    name: "CS320 Textbook",
-    description: "Like new",
-    price: 30,
+  const category = await Category.create({
+    name: `Textbooks-${Date.now()}`,
   });
 
-  const category = await Category.create({
-    name: "Textbooks",
+  const product = await Product.create({
+    name: "CS320 Textbook",
+    categoryId: category._id,
+    price: 30,
   });
 
   return {
