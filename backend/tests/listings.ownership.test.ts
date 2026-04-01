@@ -1,12 +1,8 @@
 // tests/listings.ownership.test.ts
 
-// tests listing security
-// makes sure that the owner of a listing cannot be changed just by sending a fake sellerId in the request body
-// even if someone tries to tamper with the request, the backend should keep the real seller attached to the listing
-
 import request from "supertest";
+import mongoose from "mongoose";
 import { createApp } from "../src/app";
-import { Product } from "../src/models/Product";
 import Category from "../src/models/Category";
 
 // Build app once for this test file
@@ -33,46 +29,37 @@ async function registerAndGetToken(email = uniqueEmail()) {
 
 describe("Listings ownership", () => {
   it("PATCH /api/listings/:id ignores sellerId in request body", async () => {
-    // Owner creates the listing
     const owner = await registerAndGetToken();
-
-    // Another user tries to become the seller through request body tampering
     const other = await registerAndGetToken();
 
-    // Create dependencies needed by listing
-    const product = await Product.create({
-      name: "Chair",
-      productID: Math.floor(Math.random() * 100000),
-      listingID: 1,
-      categoryID: 1,
-      price: 25,
-    });
-
     const category = await Category.create({
-      name: `Furniture-${Date.now()}`,
+      name: `Furniture-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
     });
 
-    // Create the listing as the owner
+    // No Product model now, so use a raw ObjectId string
+    const productId = new mongoose.Types.ObjectId().toString();
+
     const created = await request(app)
       .post("/api/listings")
       .set("Authorization", `Bearer ${owner.token}`)
       .send({
-        productId: product._id.toString(),
+        productId,
         categoryId: category._id.toString(),
         title: "Original Owner Listing",
         pickUpLocation: "UMass",
         description: "test",
         quantity: 1,
+        price: 25,
         condition: "good",
         isNegotiable: true,
         status: "active",
       });
 
-    expect([200, 201]).toContain(created.status);
+    expect(created.status).toBe(201);
 
     const id = created.body._id ?? created.body.id;
+    expect(id).toBeTruthy();
 
-    // Owner updates the listing, but tries to inject a different sellerId
     const updated = await request(app)
       .patch(`/api/listings/${id}`)
       .set("Authorization", `Bearer ${owner.token}`)
@@ -83,13 +70,13 @@ describe("Listings ownership", () => {
 
     expect(updated.status).toBe(200);
 
-    // Response may return sellerId as a string or populated object
     const sellerId =
       typeof updated.body.sellerId === "string"
         ? updated.body.sellerId
         : updated.body.sellerId?._id;
 
-    // sellerId should remain the real owner, not the injected one
     expect(sellerId).toBe(owner.userId);
+    expect(sellerId).not.toBe(other.userId);
+    expect(updated.body.title).toBe("Still Mine");
   });
 });
