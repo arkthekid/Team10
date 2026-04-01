@@ -4,6 +4,7 @@ import cors from "cors";
 import listingRoutes from "./routes/listingRoutes";
 import authRoutes from "./routes/authRoutes";
 import { errorHandler } from "./middleware/errorHandler";
+import transactionRoutes from "./routes/transactionRoutes";
 
 export function createApp() {
   const app = express();
@@ -21,7 +22,7 @@ export function createApp() {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/listings", listingRoutes);
-
+  app.use("/api/transactions", transactionRoutes);
   app.use(errorHandler);
 
   return app;
