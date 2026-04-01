@@ -22,13 +22,7 @@ export function createApp() {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/listings", listingRoutes);
-<<<<<<< HEAD
-  app.use("/api/products", productRoutes);
   app.use("/api/transactions", transactionRoutes);
-
-=======
-  app.use("/api/transactions", transactionRoutes);
->>>>>>> main
   app.use(errorHandler);
 
   return app;
