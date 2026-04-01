@@ -5,83 +5,91 @@ import tableImg from "@/assets/listing-table.jpg";
 import motorcycleImg from "@/assets/listing-motorcycle.jpg";
 import cabinetImg from "@/assets/listing-cabinet.jpg";
 
+export interface Category {
+  name: string;
+}
+
+export interface Seller {
+  name: string;
+}
+
 export interface Listing {
-  id: string;
+  productId: string;
   title: string;
   price: number | null;
-  location: string;
+  pickUpLocation: string;
   image: string;
-  category: string;
+  categoryId: Category;
   description: string;
-  seller: string;
+  sellerId: Seller;
   postedDate: string;
 }
 
 export const listings: Listing[] = [
   {
-    id: "1",
+    productId: "1",
     title: "1 Bdrm 2 Bath Apartment",
     price: 1475,
-    location: "Amherst, MA",
+    pickUpLocation: "Amherst, MA",
     image: apartmentImg,
-    category: "Housing",
+    categoryId: { name: "Housing" },
     description: "Spacious 1 bedroom, 2 bath apartment near campus. Includes parking and laundry in-unit. Available for spring semester.",
-    seller: "Alex M.",
+    sellerId: { name: "Alex M." },
     postedDate: "2 days ago",
   },
   {
-    id: "2",
+    productId: "2",
     title: "2019 Kawasaki Ninja",
     price: 3800,
-    location: "Hadley, MA",
+    pickUpLocation: "Hadley, MA",
     image: motorcycleImg,
-    category: "Vehicles",
+    categoryId: { name: "Vehicles" },
     description: "2019 Kawasaki Ninja 400, well maintained, low miles. Perfect commuter bike.",
-    seller: "Jordan K.",
+    sellerId: { name: "Jordan K." },
     postedDate: "5 hours ago",
   },
   {
-    id: "3",
+    productId: "3",
     title: "2012 Honda Accord",
     price: 12000,
-    location: "Amherst, MA",
+    pickUpLocation: "Amherst, MA",
     image: carImg,
-    category: "Vehicles",
+    categoryId: { name: "Vehicles" },
     description: "2012 Honda Accord EX, 85k miles, clean title. Runs great.",
-    seller: "Sam T.",
+    sellerId: { name: "Sam T." },
     postedDate: "1 day ago",
   },
   {
-    id: "4",
+    productId: "4",
     title: "North Face Backpack",
     price: 50,
-    location: "UMass Campus",
+    pickUpLocation: "UMass Campus",
     image: backpackImg,
-    category: "Accessories",
+    categoryId: { name: "Accessories" },
     description: "Lightly used North Face Recon backpack. Great for classes and hiking.",
-    seller: "Riley P.",
+    sellerId: { name: "Riley P." },
     postedDate: "3 hours ago",
   },
   {
-    id: "5",
+    productId: "5",
     title: "Portable Folding Table",
     price: null,
-    location: "Northampton, MA",
+    pickUpLocation: "Northampton, MA",
     image: tableImg,
-    category: "Furniture",
+    categoryId: { name: "Furniture" },
     description: "Free portable folding table. Great condition, just don't need it anymore.",
-    seller: "Casey L.",
+    sellerId: { name: "Casey L." },
     postedDate: "1 week ago",
   },
   {
-    id: "6",
+    productId: "6",
     title: "Kitchen Cabinet",
     price: 200,
-    location: "Amherst, MA",
+    pickUpLocation: "Amherst, MA",
     image: cabinetImg,
-    category: "Furniture",
+    categoryId: { name: "Furniture" },
     description: "White wooden kitchen cabinet in excellent condition. Must pick up.",
-    seller: "Morgan D.",
+    sellerId: { name: "Morgan D." },
     postedDate: "4 days ago",
   },
 ];
