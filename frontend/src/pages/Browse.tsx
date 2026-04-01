@@ -15,7 +15,7 @@ const Browse = () => {
 
   const filtered = listings.filter((l) => {
     const matchSearch = l.title.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = category === "All" || l.category === category;
+    const matchCategory = category === "All" || l.categoryId.name === category;
     const matchPrice =
       priceFilter === "all" ||
       (priceFilter === "free" && l.price === null) ||
@@ -72,7 +72,7 @@ const Browse = () => {
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+            <ListingCard key={listing.productId} listing={listing} />
           ))}
         </div>
 

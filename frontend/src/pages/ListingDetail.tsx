@@ -11,7 +11,7 @@ import { toast } from "sonner";
 const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const listing = listings.find((l) => l.id === id);
+  const listing = listings.find((l) => l.productId === id);
   const [showSafety, setShowSafety] = useState(false);
 
   if (!listing) {
@@ -56,7 +56,7 @@ const ListingDetail = () => {
               <DropdownMenuItem onClick={() => toast.success("Listing reported. We'll review it shortly.")}>
                 <Flag className="w-4 h-4 mr-2" /> Report Listing
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.success(`${listing.seller} has been blocked.`)}>
+              <DropdownMenuItem onClick={() => toast.success(`${listing.sellerId.name} has been blocked.`)}>
                 <ShieldX className="w-4 h-4 mr-2" /> Block Seller
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -85,10 +85,10 @@ const ListingDetail = () => {
             </div>
 
             <div className="text-sm text-muted-foreground space-y-1">
-              <p>{listing.location} · {listing.postedDate}</p>
-              <p>Posted by <span className="font-medium text-foreground">{listing.seller}</span></p>
+              <p>{listing.pickUpLocation} · {listing.postedDate}</p>
+              <p>Posted by <span className="font-medium text-foreground">{listing.sellerId.name}</span></p>
               <p className="inline-block bg-secondary text-secondary-foreground px-2 py-0.5 rounded text-xs font-medium">
-                {listing.category}
+                {listing.categoryId.name}
               </p>
             </div>
 

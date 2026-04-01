@@ -8,7 +8,7 @@ interface ListingCardProps {
 const ListingCard = ({ listing }: ListingCardProps) => {
   return (
     <Link
-      to={`/listing/${listing.id}`}
+      to={`/listing/${listing.productId}`}
       className="group bg-card rounded-lg border overflow-hidden hover:shadow-md transition-shadow"
     >
       <div className="aspect-square overflow-hidden bg-muted">
@@ -23,7 +23,7 @@ const ListingCard = ({ listing }: ListingCardProps) => {
           {listing.price === null ? "FREE" : `$${listing.price.toLocaleString()}`}
         </p>
         <p className="text-sm text-card-foreground truncate">{listing.title}</p>
-        <p className="text-xs text-muted-foreground mt-1">{listing.location}</p>
+        <p className="text-xs text-muted-foreground mt-1">{listing.pickUpLocation}</p>
       </div>
     </Link>
   );
