@@ -3,7 +3,6 @@
 import request from "supertest";
 import mongoose from "mongoose";
 import { createApp } from "../src/app";
-import Category from "../src/models/Category";
 
 // Build app once for this test file
 const app = createApp();
