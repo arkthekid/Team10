@@ -1,10 +1,9 @@
 import * as listingService from "../../src/services/listingService";
 import { AppDataSource } from "../../src/config/data-source";
 import { Listing } from "../../src/entities/Listing";
-import { afterEach } from "node:test";
 
 // ✅ Mock DataSource (NOT entity)
-jest.mock("../../../src/config/data-source", () => ({
+jest.mock("../../src/config/data-source", () => ({
   AppDataSource: {
     getRepository: jest.fn(),
   },

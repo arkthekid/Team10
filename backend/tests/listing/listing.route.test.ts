@@ -3,7 +3,7 @@ import express from "express";
 import router from "../../src/routes/listingRoutes";
 
 // Mock controller
-jest.mock("../../../src/controllers/listingController", () => ({
+jest.mock("../../src/controllers/listingController", () => ({
   getListings: jest.fn((req, res) => res.status(200).json({ success: true })),
   getMyListings: jest.fn((req, res) => res.status(200).json({ success: true })),
   getListingById: jest.fn((req, res) => res.status(200).json({ success: true })),
@@ -13,7 +13,7 @@ jest.mock("../../../src/controllers/listingController", () => ({
 }));
 
 // Mock protect middleware
-jest.mock("../../../src/middleware/auth", () => ({
+jest.mock("../../src/middleware/auth", () => ({
   protect: jest.fn((req, res, next) => {
     req.user = { _id: "user123" }; // fake user
     next();

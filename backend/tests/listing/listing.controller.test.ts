@@ -5,8 +5,8 @@ import { getUserId } from "../../src/utils/getUserId";
 import { AppError } from "../../src/utils/AppError";
 
 // Mock dependencies
-jest.mock("../../../src/services/listingService");
-jest.mock("../../../src/utils/getUserId");
+jest.mock("../../src/services/listingService");
+jest.mock("../../src/utils/getUserId");
 
 describe("createListing controller", () => {
   let req: Partial<Request>;
