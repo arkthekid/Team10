@@ -1,75 +1,97 @@
-// src/controllers/listingController.ts
 import mongoose from "mongoose";
-import { Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError";
 import * as listingService from "../services/listingService";
 import { asyncHandler } from "../middleware/asyncHandler";
+import { getUserId } from "../utils/getUserId";
 
-function getParam(req: Request, key: string): string {
-  const val = (req.params as any)[key] as unknown;
-  if (typeof val === "string" && val.length > 0) return val;
-  throw new AppError(`Invalid or missing param: ${key}`, 400);
-}
 
-// Read user id set by protect middleware
-function getUserId(req: Request): string {
-  const user = (req as any).user as { _id?: any } | undefined;
-  const id = user?._id?.toString?.();
-  if (!id) throw new AppError("Unauthorized", 401);
-  return id;
-}
+export const createListing = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = getUserId(req);
 
-export const createListing = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
+    const newListing = await listingService.createListing(req.body, userId);
 
-  // sellerId comes from JWT (ignore any sellerId client sends)
-  const listing = await listingService.createListing(req.body, userId);
-  res.status(201).json(listing);
-});
-
-export const getListings = asyncHandler(async (req: Request, res: Response) => {
-  const result = await listingService.getListings(req.query as any);
-  res.json(result);
-});
-
-export const getListingById = asyncHandler(async (req: Request, res: Response) => {
-  const id = String((req.params as any).id);
-
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    throw new AppError("Invalid listing id", 400);
+    res.status(201).json(newListing);
+  } catch (error) {
+    next(error);
   }
+};
 
-  const listing = await listingService.getListingById(id);
-  if (!listing) throw new AppError("Listing not found", 404);
 
-  res.json(listing);
-});
+export const getListings = async (req: Request<{}, {}, {}, Record<string, any>>, res: Response, next: NextFunction) => {
+  try {
+    const listings = await listingService.getListings(req.query);
 
-export const updateListing = asyncHandler(async (req: Request, res: Response) => {
-  const id = getParam(req, "id");
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new AppError("Invalid listing id", 400);
+    res.status(200).json(listings);
+  } catch (error) {
+    next(error);
+  }
+};
 
-  const userId = (req as any).user?._id?.toString();
-  if (!userId) throw new AppError("Unauthorized", 401);
 
-  const updated = await listingService.updateListing(id, req.body, userId);
-  res.json(updated);
-});
+export const getListingById = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
 
-export const deleteListing = asyncHandler(async (req: Request, res: Response) => {
-  const id = getParam(req, "id");
-  if (!mongoose.Types.ObjectId.isValid(id)) throw new AppError("Invalid listing id", 400);
+    if (!id) {
+      return next(new AppError("Listing id is required", 400));
+    }
 
-  const userId = (req as any).user?._id?.toString();
-  if (!userId) throw new AppError("Unauthorized", 401);
+    const listing = await listingService.getListingById(id); // do we need to verify the user????
+    
+    res.status(200).json(listing);
+  } catch (error) {
+    next(error);
+  }
+}
 
-  await listingService.deleteListing(id, userId);
-  res.status(204).send();
-});
 
-export const getMyListings = asyncHandler(async (req: Request, res: Response) => {
-  const userId = getUserId(req);
+export const updateListing = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
 
-  const result = await listingService.getMyListings(userId, req.query as any);
-  res.json(result);
-});
+    if (!id) {
+      return next(new AppError("Listing id is required", 400));
+    }
+
+    const userId = getUserId(req);
+    const updated = await listingService.updateListing(id, req.body, userId);
+    
+    res.status(200).json(updated);
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+export const deleteListing = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return next(new AppError("Listing id is required", 400));
+    }
+
+    const userId = getUserId(req);
+
+    await listingService.deleteListing(id, userId);
+
+    res.status(204).json(null);
+  } catch (error) {
+      next(error);
+  }
+}
+
+
+export const getMyListings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = getUserId(req);
+
+    const listings = await listingService.getMyListings(userId);
+
+    res.status(200).json(listings);
+  } catch (error) {
+    next(error);
+  }
+};
