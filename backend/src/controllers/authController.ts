@@ -4,10 +4,10 @@ import * as authService from "../services/authService";
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.register(req.body);
-  res.status(201).json(result);
+  return res.status(201).json(result);
 });
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.login(req.body);
-  res.json(result);
+  return res.json(result);
 });

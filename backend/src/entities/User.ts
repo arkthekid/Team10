@@ -16,5 +16,5 @@ export class User {
   passwordHash!: string; 
 
   @Column({ default: "user" })
-  role!: string;  // 👈 added role
+  role!: "user" | "admin"; // ensures only "user" or "admin" roles are allowed (used in JWT and future auth checks)
 }
