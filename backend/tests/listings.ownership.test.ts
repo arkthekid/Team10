@@ -6,7 +6,6 @@
 
 import request from "supertest";
 import { createApp } from "../src/app";
-import { Product } from "../src/models/Product";
 import Category from "../src/models/Category";
 
 // Build app once for this test file

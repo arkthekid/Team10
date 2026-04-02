@@ -1,6 +1,6 @@
 // tests/auth.test.ts
 import request from "supertest";
-import { createApp } from "../src/app";
+import { createApp } from "../../src/app";
 
 const app = createApp();
 
