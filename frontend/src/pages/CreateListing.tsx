@@ -16,7 +16,7 @@ const CreateListing = () => {
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
-  const [location, setLocation] = useState("");
+  const [pickUpLocation, setPickUpLocation] = useState("");
   const [condition, setCondition] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,8 +72,8 @@ const CreateListing = () => {
             </Select>
           </div>
           <div>
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} required />
+            <Label htmlFor="pickUpLocation">Pick-up Location</Label>
+            <Input id="pickUpLocation" value={pickUpLocation} onChange={(e) => setPickUpLocation(e.target.value)} required />
           </div>
           <div>
             <Label>Condition</Label>

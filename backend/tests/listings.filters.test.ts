@@ -1,22 +1,14 @@
 // tests/listings.filters.test.ts
 
-// Covers listing browsing behavior
-// tests whether the API returns the correct listings when someone searches or filters
-// checks that a keyword search only returns matching listings, that filtering by status like active works correctly
-// checks that pagination works when a limit is set
-
 import request from "supertest";
+import mongoose from "mongoose";
 import { createApp } from "../src/app";
-import { Product } from "../src/models/Product";
 import Category from "../src/models/Category";
 
-// Build app once for this file
 const app = createApp();
 
-// Fresh email helper so register calls do not collide
 const uniqueEmail = () => `amoemyint+${Date.now()}@umass.edu`;
 
-// Helper: register a user and return auth token + user id
 async function registerAndGetToken(email = uniqueEmail()) {
   const res = await request(app).post("/api/auth/register").send({
     name: "Arkar",
@@ -32,22 +24,15 @@ async function registerAndGetToken(email = uniqueEmail()) {
   };
 }
 
-// Helper: create one product and one category to attach to listings
-async function seedProductAndCategory() {
-  const product = await Product.create({
-    name: "Book",
-    productID: Math.floor(Math.random() * 100000),
-    listingID: 1,
-    categoryID: 1,
-    price: 30,
-  });
-
+// Since there is no Product model anymore, just generate an ObjectId
+// for productId and create only a Category document.
+async function seedIds() {
   const category = await Category.create({
-    name: `Textbooks-${Date.now()}`,
+    name: `Textbooks-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
   });
 
   return {
-    productId: product._id.toString(),
+    productId: new mongoose.Types.ObjectId().toString(),
     categoryId: category._id.toString(),
   };
 }
@@ -55,10 +40,9 @@ async function seedProductAndCategory() {
 describe("Listings filters", () => {
   it("GET /api/listings?q= returns matching titles only", async () => {
     const { token } = await registerAndGetToken();
-    const { productId, categoryId } = await seedProductAndCategory();
+    const { productId, categoryId } = await seedIds();
 
-    // Listing that SHOULD match the search
-    await request(app)
+    const matchRes = await request(app)
       .post("/api/listings")
       .set("Authorization", `Bearer ${token}`)
       .send({
@@ -68,13 +52,15 @@ describe("Listings filters", () => {
         pickUpLocation: "UMass Library",
         description: "cold and clean",
         quantity: 1,
+        price: 50,
         condition: "good",
         isNegotiable: true,
         status: "active",
       });
 
-    // Listing that should NOT match the search
-    await request(app)
+    expect(matchRes.status).toBe(201);
+
+    const nonMatchRes = await request(app)
       .post("/api/listings")
       .set("Authorization", `Bearer ${token}`)
       .send({
@@ -84,18 +70,19 @@ describe("Listings filters", () => {
         pickUpLocation: "UMass Library",
         description: "bright light",
         quantity: 1,
+        price: 20,
         condition: "good",
         isNegotiable: true,
         status: "active",
       });
 
-    // Search by keyword
+    expect(nonMatchRes.status).toBe(201);
+
     const res = await request(app).get("/api/listings?q=fridge");
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.items)).toBe(true);
 
-    // Verify only the matching listing appears
     const titles = res.body.items.map((x: any) => x.title);
     expect(titles).toContain("Mini Fridge");
     expect(titles).not.toContain("Desk Lamp");
@@ -103,10 +90,9 @@ describe("Listings filters", () => {
 
   it("GET /api/listings filters by status", async () => {
     const { token } = await registerAndGetToken();
-    const { productId, categoryId } = await seedProductAndCategory();
+    const { productId, categoryId } = await seedIds();
 
-    // Active listing
-    await request(app)
+    const activeRes = await request(app)
       .post("/api/listings")
       .set("Authorization", `Bearer ${token}`)
       .send({
@@ -116,13 +102,15 @@ describe("Listings filters", () => {
         pickUpLocation: "UMass Library",
         description: "active one",
         quantity: 1,
+        price: 25,
         condition: "good",
         isNegotiable: true,
         status: "active",
       });
 
-    // Sold listing
-    await request(app)
+    expect(activeRes.status).toBe(201);
+
+    const soldRes = await request(app)
       .post("/api/listings")
       .set("Authorization", `Bearer ${token}`)
       .send({
@@ -132,12 +120,14 @@ describe("Listings filters", () => {
         pickUpLocation: "UMass Library",
         description: "sold one",
         quantity: 1,
+        price: 30,
         condition: "good",
         isNegotiable: true,
         status: "sold",
       });
 
-    // Ask only for active listings
+    expect(soldRes.status).toBe(201);
+
     const res = await request(app).get("/api/listings?status=active");
 
     expect(res.status).toBe(200);
@@ -149,11 +139,10 @@ describe("Listings filters", () => {
 
   it("GET /api/listings respects limit", async () => {
     const { token } = await registerAndGetToken();
-    const { productId, categoryId } = await seedProductAndCategory();
+    const { productId, categoryId } = await seedIds();
 
-    // Create 3 listings
     for (let i = 0; i < 3; i++) {
-      await request(app)
+      const createRes = await request(app)
         .post("/api/listings")
         .set("Authorization", `Bearer ${token}`)
         .send({
@@ -163,13 +152,15 @@ describe("Listings filters", () => {
           pickUpLocation: "UMass Library",
           description: "paged",
           quantity: 1,
+          price: 10 + i,
           condition: "good",
           isNegotiable: true,
           status: "active",
         });
+
+      expect(createRes.status).toBe(201);
     }
 
-    // Request only 2 per page
     const res = await request(app).get("/api/listings?page=1&limit=2");
 
     expect(res.status).toBe(200);
