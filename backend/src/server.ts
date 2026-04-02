@@ -2,17 +2,16 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import createApp from "./app";
-import { connectDB } from "./config/db";
-import "./models/Product";
-import "./models/Category";
+import { AppDataSource } from "./config/data-source";
 
 const PORT = process.env.PORT || 3001;
 
 const start = async () => {
   try {
-    await connectDB();
+    await AppDataSource.initialize()
+    console.log("Data Source has been initialized!")
 
-    const app = createApp(); // create Express instance here
+    const app = createApp();
 
     app.listen(PORT, () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);
@@ -24,3 +23,4 @@ const start = async () => {
 };
 
 start();
+

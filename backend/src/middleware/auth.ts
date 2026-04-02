@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import User from "../models/User";
+import { AppDataSource } from "../config/data-source";
+import { User } from "../entities/User";
 
 export async function protect(req: Request, res: Response, next: NextFunction) {
   try {
@@ -24,12 +25,20 @@ export async function protect(req: Request, res: Response, next: NextFunction) {
 
     const payload = jwt.verify(token, secret) as jwt.JwtPayload;
 
-    const user = await User.findById(payload.sub).select("_id name umassEmail role");
+    // ✅ TypeORM lookup using id from payload
+    const userRepo = AppDataSource.getRepository(User);
+    const user = await userRepo.findOne({ where: { id: payload.id } });
+
     if (!user) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
-    req.user = user;
+    req.user = {
+      id: user.id.toString(),
+      email: user.umassEmail,
+      role: user.role as "user" | "admin",
+    };
+
     next();
   } catch {
     return res.status(401).json({ message: "Invalid token" });
