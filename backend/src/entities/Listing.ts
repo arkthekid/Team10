@@ -1,18 +1,19 @@
 import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
-import { User } from "./User";
+//import { User } from "./User";
+import { Category } from "../constants/categories";
 
 @Entity()
 export class Listing {
   @PrimaryGeneratedColumn("uuid")
   listingId!: string;
 
-  @Column()
+  @Column("text")
   name!: string;
 
-  @Column()
+  @Column("text")
   sellerId!: string;
 
-  @Column()
+  @Column("text")
   pickUpLocation!: string;
 
   @Column("text")
@@ -21,14 +22,14 @@ export class Listing {
   @Column("decimal")
   price!: number;
 
-  @Column()
+  @Column("text")
   condition!: string;
 
-  @Column({ default: "available" })
+  @Column({ type: "text", default: "available" })
   status!: string;
 
-  @Column()
-  category!: string;
+  @Column("text")
+  category!: Category;
 
   // @ManyToOne(() => User, (user) => user.listings)
   // user!: User;

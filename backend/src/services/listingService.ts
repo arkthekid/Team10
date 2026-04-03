@@ -41,12 +41,14 @@ export async function deleteListing(id: string, userId: string) {
   const repo = AppDataSource.getRepository(Listing);
 
   const listing = await repo.findOne({
-    where: { listingId: id }
-  })
-  if (!listing) throw new Error("Listing not found");
-  if (listing.sellerId !== userId) throw new Error("Unauthorized");
+    where: { listingId: id },
+  });
+  if (!listing) throw new AppError("Listing not found", 404);
+  if (listing.sellerId !== userId) throw new AppError("Unauthorized", 403);
 
-  await repo.remove(listing)
+  await repo.remove(listing);
+
+  return { message: "Listing deleted successfully" };
 }
 
 export async function getMyListings(userId: string) {
