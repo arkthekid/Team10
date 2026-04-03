@@ -13,7 +13,8 @@ export const AppDataSource = new DataSource({
 
   ssl: { rejectUnauthorized: false }, // 👈 add this for cloud DBs
 
-  synchronize: true, // auto table creation
+  // synchronize: true, // auto table creation
+  synchronize: false, // ✅ CHANGED: disable in production (use migrations instead)
   logging: false,
   entities: [Listing, User],
 });
