@@ -86,7 +86,11 @@ export async function deleteListing(id: string, userId: string) {
 export async function getMyListings(userId: string) {
   const repo = AppDataSource.getRepository(Listing);
   
-  return await repo.find({
-    where: {sellerId: userId}
+  const myListings = await repo.find({
+    where: {sellerId: userId},
   })
+
+  if (!myListings) return new AppError("No listing found", 404);
+
+  return myListings;
 }
