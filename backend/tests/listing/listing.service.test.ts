@@ -147,3 +147,7 @@ describe("createListing service", () => {
     });
   });
 });
+
+describe("getListings controller", () => {
+
+})

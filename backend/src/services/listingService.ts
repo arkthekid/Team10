@@ -3,20 +3,6 @@ import { AppDataSource } from "../config/data-source";
 import { Listing } from "../entities/Listing";
 import { GetListingDto } from "../dto/getListing.dto";
 
-type ListingQuery = {
-  category?: string;
-  seller?: string;
-  product?: string;
-  status?: string;
-  condition?: string;
-  q?: string;
-  minPrice?: string;
-  maxPrice?: string;
-  page?: string;
-  limit?: string;
-  sort?: string;
-};
-
 export async function createListing(data: Partial<Listing>, userId: string) {
   const listingRepository = AppDataSource.getRepository(Listing);
 
@@ -50,6 +36,13 @@ export async function getListings(query: GetListingDto) {
     });
   }
 
+  if (query.search) {
+    qb.andWhere("listing.search ILIKE :search OR listing.description ILIKE :search", {
+      search: query.search,
+    })
+  }
+
+  // order
   qb.orderBy(
     `listing.${query.sortBy || "createdAt"}`,
     query.order || "DESC",
@@ -64,7 +57,14 @@ export async function getListings(query: GetListingDto) {
 }
 
 export async function getListingById(id: string) {
+  const repo = AppDataSource.getRepository(Listing);
   
+  const listing = await repo.findOne({
+    where: { listingId: id },
+  })
+  if (!listing) throw new AppError("Listing not found", 404);
+
+  return listing;
 }
 
 export async function updateListing(id: string, data: any, userId: string) {

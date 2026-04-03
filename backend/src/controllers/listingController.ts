@@ -22,9 +22,10 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
 export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: Response, next: NextFunction) => {
   try {
     const {
-      category,
-      sortBy = "createdAt",
-      order = "DESC",
+      search,
+      category, // can be undefined
+      sortBy = "createdAt", // if sortBy is undefined → use "createdAt"
+      order = "DESC", // if order is undefined → use "DESC"
       minPrice,
       maxPrice,
       page = 1,
@@ -37,7 +38,8 @@ export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: 
       page: Number(page),
       limit: Number(limit),
 
-      ...(category && { category }),
+      ...(search && { search }),
+      ...(category && { category }), // only add if it is undefined
 
       ...(minPrice !== undefined && {
         minPrice: Number(minPrice),
@@ -62,7 +64,7 @@ export const getListingById = async (req: Request<{ id: string }>, res: Response
       return next(new AppError("Listing id is required", 400));
     }
 
-    const listing = await listingService.getListingById(id); // do we need to verify the user????
+    const listing = await listingService.getListingById(id); 
     
     res.status(200).json(listing);
   } catch (error) {
