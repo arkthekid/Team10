@@ -1,12 +1,36 @@
-// tests/auth.test.ts
 import request from "supertest";
 import { createApp } from "../../src/app";
+import { AppDataSource } from "../../src/config/data-source"; // ✅ ADDED: needed to initialize DB for API tests
+import { User } from "../../src/entities/User"; // ✅ ADDED: needed to clear user data between tests
 
 const app = createApp();
 
 const uniqueEmail = () => `amoemyint+${Date.now()}@umass.edu`;
 
 describe("Auth", () => {
+  beforeAll(async () => {
+    if (!AppDataSource.isInitialized) {
+      await AppDataSource.initialize(); 
+      // ✅ ADDED: initialize database connection before tests run
+      // prevents 500 errors when hitting endpoints that use the DB
+    }
+  });
+
+  beforeEach(async () => {
+    const userRepo = AppDataSource.getRepository(User);
+    await userRepo.clear(); 
+    // ✅ ADDED: clear users before each test
+    // ensures tests don’t interfere with each other (e.g., duplicate emails)
+  });
+
+  afterAll(async () => {
+    if (AppDataSource.isInitialized) {
+      await AppDataSource.destroy(); 
+      // ✅ ADDED: close DB connection after tests
+      // prevents open handles / memory leaks in Jest
+    }
+  });
+
   it("POST /api/auth/register returns token + user", async () => {
     const email = uniqueEmail();
 
@@ -78,7 +102,7 @@ describe("Auth", () => {
     expect(res.body.message).toBeTruthy();
   });
 
-    it("POST /api/auth/register non-umass email fails", async () => {
+  it("POST /api/auth/register non-umass email fails", async () => {
     const res = await request(app).post("/api/auth/register").send({
       name: "Arkar",
       umassEmail: "arkar@gmail.com",
