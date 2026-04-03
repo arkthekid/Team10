@@ -1,6 +1,7 @@
 import { AppError } from "../utils/AppError";
 import { AppDataSource } from "../config/data-source";
 import { Listing } from "../entities/Listing";
+import { GetListingDto } from "../dto/getListing.dto";
 
 type ListingQuery = {
   category?: string;
@@ -25,8 +26,41 @@ export async function createListing(data: Partial<Listing>, userId: string) {
   return await listingRepository.save(listing);
 }
 
-export async function getListings(query: ListingQuery) {
-  
+export async function getListings(query: GetListingDto) {
+  const repo = AppDataSource.getRepository(Listing);
+
+  const qb = repo.createQueryBuilder("listing");
+
+  // filtering
+  if (query.category) {
+    qb.where("listing.category = :category", {
+      category: query.category,
+    });
+  }
+
+  if (query.minPrice) {
+    qb.andWhere("listing.price >= :minPrice", {
+      minPrice: query.minPrice,
+    });
+  }
+
+  if (query.maxPrice) {
+    qb.andWhere("listing.price <= :maxPrice", {
+      maxPrice: query.maxPrice,
+    });
+  }
+
+  qb.orderBy(
+    `listing.${query.sortBy || "createdAt"}`,
+    query.order || "DESC",
+  );
+
+  const page = query.page || 1;
+  const limit = query.limit || 10;
+
+  qb.skip((page - 1) * limit).take(limit);
+
+  return await qb.getMany();
 }
 
 export async function getListingById(id: string) {

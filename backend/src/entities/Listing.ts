@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
 import { User } from "./User";
 
 @Entity()
@@ -30,6 +30,11 @@ export class Listing {
   @Column()
   category!: string;
 
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
   // @ManyToOne(() => User, (user) => user.listings)
   // user!: User;
 }
