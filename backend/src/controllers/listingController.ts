@@ -4,7 +4,7 @@ import { AppError } from "../utils/AppError";
 import * as listingService from "../services/listingService";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { getUserId } from "../utils/getUserId";
-
+import { GetListingDto } from "../dto/getListing.dto";
 
 export const createListing = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -19,16 +19,42 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
 };
 
 
-export const getListings = async (req: Request<{}, {}, {}, Record<string, any>>, res: Response, next: NextFunction) => {
+export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: Response, next: NextFunction) => {
   try {
-    const listings = await listingService.getListings(req.query);
+    const {
+      search,
+      category, // can be undefined
+      sortBy = "createdAt", // if sortBy is undefined → use "createdAt"
+      order = "DESC", // if order is undefined → use "DESC"
+      minPrice,
+      maxPrice,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    const listings = await listingService.getListings({
+      sortBy,
+      order,
+      page: Number(page),
+      limit: Number(limit),
+
+      ...(search && { search }),
+      ...(category && { category }), // only add if it is undefined
+
+      ...(minPrice !== undefined && {
+        minPrice: Number(minPrice),
+      }),
+
+      ...(maxPrice !== undefined && {
+        maxPrice: Number(maxPrice),
+      }),
+    });
 
     res.status(200).json(listings);
   } catch (error) {
     next(error);
   }
 };
-
 
 export const getListingById = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   try {
@@ -38,7 +64,7 @@ export const getListingById = async (req: Request<{ id: string }>, res: Response
       return next(new AppError("Listing id is required", 400));
     }
 
-    const listing = await listingService.getListingById(id); // do we need to verify the user????
+    const listing = await listingService.getListingById(id); 
     
     res.status(200).json(listing);
   } catch (error) {

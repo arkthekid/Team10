@@ -64,3 +64,7 @@ describe("createListing controller", () => {
     expect(next).toHaveBeenCalledWith(error); // next(error) is called
   });
 });
+
+describe("getListings controller", () => {
+
+})

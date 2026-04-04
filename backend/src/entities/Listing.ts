@@ -31,6 +31,11 @@ export class Listing {
   @Column("text")
   category!: Category;
 
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
   // @ManyToOne(() => User, (user) => user.listings)
   // user!: User;
 }

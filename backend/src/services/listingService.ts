@@ -1,20 +1,7 @@
 import { AppError } from "../utils/AppError";
 import { AppDataSource } from "../config/data-source";
 import { Listing } from "../entities/Listing";
-
-type ListingQuery = {
-  category?: string;
-  seller?: string;
-  product?: string;
-  status?: string;
-  condition?: string;
-  q?: string;
-  minPrice?: string;
-  maxPrice?: string;
-  page?: string;
-  limit?: string;
-  sort?: string;
-};
+import { GetListingDto } from "../dto/getListing.dto";
 
 export async function createListing(data: Partial<Listing>, userId: string) {
   const listingRepository = AppDataSource.getRepository(Listing);
@@ -25,12 +12,59 @@ export async function createListing(data: Partial<Listing>, userId: string) {
   return await listingRepository.save(listing);
 }
 
-export async function getListings(query: ListingQuery) {
-  
+export async function getListings(query: GetListingDto) {
+  const repo = AppDataSource.getRepository(Listing);
+
+  const qb = repo.createQueryBuilder("listing");
+
+  // filtering
+  if (query.category) {
+    qb.where("listing.category = :category", {
+      category: query.category,
+    });
+  }
+
+  if (query.minPrice) {
+    qb.andWhere("listing.price >= :minPrice", {
+      minPrice: query.minPrice,
+    });
+  }
+
+  if (query.maxPrice) {
+    qb.andWhere("listing.price <= :maxPrice", {
+      maxPrice: query.maxPrice,
+    });
+  }
+
+  if (query.search) {
+    qb.andWhere("listing.search ILIKE :search OR listing.description ILIKE :search", {
+      search: query.search,
+    })
+  }
+
+  // order
+  qb.orderBy(
+    `listing.${query.sortBy || "createdAt"}`,
+    query.order || "DESC",
+  );
+
+  const page = query.page || 1;
+  const limit = query.limit || 10;
+
+  qb.skip((page - 1) * limit).take(limit);
+
+  return await qb.getMany();
 }
 
 export async function getListingById(id: string) {
+  const repo = AppDataSource.getRepository(Listing);
   
+  const listing = await repo.findOne({
+    where: { listingId: id },
+  })
+  if (!listing) throw new AppError("Listing not found", 404);
+
+  return listing;
 }
 
 export async function updateListing(id: string, data: any, userId: string) {
@@ -54,7 +88,11 @@ export async function deleteListing(id: string, userId: string) {
 export async function getMyListings(userId: string) {
   const repo = AppDataSource.getRepository(Listing);
   
-  return await repo.find({
-    where: {sellerId: userId}
+  const myListings = await repo.find({
+    where: {sellerId: userId},
   })
+
+  if (!myListings) return new AppError("No listing found", 404);
+
+  return myListings;
 }
