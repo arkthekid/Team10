@@ -90,6 +90,80 @@ describe("authService", () => {
         })
       ).rejects.toThrow("Email already registered");
     });
+
+    it("normalizes email before checking and saving", async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      mockRepo.create.mockImplementation((data) => ({
+        id: 1,
+        role: "user",
+        ...data,
+      }));
+
+      mockRepo.save.mockResolvedValue(undefined);
+
+      const result = await authService.register({
+        name: "Arkar",
+        umassEmail: "  ARKAR@UMASS.EDU  ",
+        password: "Test1234!",
+      });
+
+      expect(mockRepo.findOne).toHaveBeenCalledWith({
+        where: { umassEmail: "arkar@umass.edu" },
+      });
+
+      expect(result.user.umassEmail).toBe("arkar@umass.edu");
+    });
+
+    it("trims name before saving", async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      mockRepo.create.mockImplementation((data) => ({
+        id: 1,
+        role: "user",
+        ...data,
+      }));
+
+      mockRepo.save.mockResolvedValue(undefined);
+
+      const result = await authService.register({
+        name: "  Arkar  ",
+        umassEmail: "arkar@umass.edu",
+        password: "Test1234!",
+      });
+
+      expect(result.user.name).toBe("Arkar");
+    });
+
+    it("rejects short password", async () => {
+      await expect(
+        authService.register({
+          name: "Arkar",
+          umassEmail: "arkar@umass.edu",
+          password: "123",
+        })
+      ).rejects.toThrow("Password must be at least 8 characters");
+    });
+
+    it("throws if saving user fails", async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      mockRepo.create.mockImplementation((data) => ({
+        id: 1,
+        role: "user",
+        ...data,
+      }));
+
+      mockRepo.save.mockRejectedValue(new Error("Save failed"));
+
+      await expect(
+        authService.register({
+          name: "Arkar",
+          umassEmail: "arkar@umass.edu",
+          password: "Test1234!",
+        })
+      ).rejects.toThrow("Save failed");
+    });
   });
 
   describe("login", () => {
@@ -140,6 +214,52 @@ describe("authService", () => {
         authService.login({
           umassEmail: "arkar@umass.edu",
           password: "WrongPassword!",
+        })
+      ).rejects.toThrow("Invalid credentials");
+    });
+
+    it("normalizes login email before querying", async () => {
+      const passwordHash = await bcrypt.hash("Test1234!", 4);
+
+      mockRepo.findOne.mockResolvedValue({
+        id: 1,
+        name: "Arkar",
+        umassEmail: "arkar@umass.edu",
+        passwordHash,
+        role: "user",
+      });
+
+      await authService.login({
+        umassEmail: "  ARKAR@UMASS.EDU  ",
+        password: "Test1234!",
+      });
+
+      expect(mockRepo.findOne).toHaveBeenCalledWith({
+        where: { umassEmail: "arkar@umass.edu" },
+      });
+    });
+
+    it("rejects missing login fields", async () => {
+      await expect(
+        authService.login({
+          umassEmail: "",
+          password: "",
+        })
+      ).rejects.toThrow("Email and password are required");
+    });
+
+    it("rejects user record without passwordHash", async () => {
+      mockRepo.findOne.mockResolvedValue({
+        id: 1,
+        name: "Arkar",
+        umassEmail: "arkar@umass.edu",
+        role: "user",
+      });
+
+      await expect(
+        authService.login({
+          umassEmail: "arkar@umass.edu",
+          password: "Test1234!",
         })
       ).rejects.toThrow("Invalid credentials");
     });

@@ -82,6 +82,28 @@ describe("Auth API", () => {
     expect(second.body.message).toMatch(/already registered|email/i);
   });
 
+  it("POST /api/auth/register rejects missing fields", async () => {
+    const res = await request(app).post("/api/auth/register").send({
+      name: "",
+      umassEmail: "",
+      password: "",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/required/i);
+  });
+
+  it("POST /api/auth/register rejects short password", async () => {
+    const res = await request(app).post("/api/auth/register").send({
+      name: "Arkar",
+      umassEmail: uniqueEmail(),
+      password: "123",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/at least 8 characters/i);
+  });
+
   it("POST /api/auth/login returns token + user for valid credentials", async () => {
     const email = uniqueEmail();
     const password = "Test1234!";
@@ -135,5 +157,63 @@ describe("Auth API", () => {
 
     expect(res.status).toBe(401);
     expect(res.body.message).toMatch(/invalid credentials/i);
+  });
+
+  it("POST /api/auth/login rejects missing fields", async () => {
+    const res = await request(app).post("/api/auth/login").send({
+      umassEmail: "",
+      password: "",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/required/i);
+  });
+
+  it("POST /api/auth/login accepts email with different casing/spaces", async () => {
+    const email = uniqueEmail().toLowerCase();
+    const password = "Test1234!";
+
+    await request(app).post("/api/auth/register").send({
+      name: "Case User",
+      umassEmail: email,
+      password,
+    });
+
+    const res = await request(app).post("/api/auth/login").send({
+      umassEmail: `  ${email.toUpperCase()}  `,
+      password,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.umassEmail).toBe(email);
+  });
+
+  it("GET /api/auth/me returns current user with valid token", async () => {
+    const email = uniqueEmail();
+    const password = "Test1234!";
+
+    const registerRes = await request(app).post("/api/auth/register").send({
+      name: "Me User",
+      umassEmail: email,
+      password,
+    });
+
+    const token = registerRes.body.token;
+
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBeTruthy();
+    expect(res.body.email).toBe(email);
+    expect(res.body.role).toBe("user");
+  });
+
+  it("GET /api/auth/me rejects missing token", async () => {
+    const res = await request(app).get("/api/auth/me");
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toMatch(/missing token/i);
   });
 });
