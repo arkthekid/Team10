@@ -2,26 +2,27 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
-import { loginUser } from "../lib/authApi";
+import { registerUser } from "../lib/authApi";
 
-const Login = () => {
+const Register = () => {
   const navigate = useNavigate();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      await loginUser({ umassEmail: email, password });
-      navigate("/browse");
+      await registerUser({ name, umassEmail: email, password });
+      navigate("/login");
     } catch (err: any) {
-      setError(err.message || "Login failed");
+      setError(err.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -30,21 +31,32 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <MarketplaceHeader />
-
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="bg-card rounded-lg shadow-sm border p-8 max-w-sm w-full">
-          <h1 className="text-2xl font-semibold mb-2 text-center">Login</h1>
+          <h1 className="text-2xl font-semibold mb-2 text-center">Register</h1>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            Sign in to access the marketplace
+            Create your marketplace account
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
+              <label className="block text-sm font-medium mb-2">Name</label>
+              <input
+                type="text"
+                className="w-full h-12 rounded-md border bg-background px-3 text-sm"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">UMass Email</label>
               <input
                 type="email"
                 className="w-full h-12 rounded-md border bg-background px-3 text-sm"
-                placeholder="Enter your UMass email"
+                placeholder="Enter your @umass.edu email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -70,17 +82,13 @@ const Login = () => {
               className="w-full h-12 text-base font-medium"
               disabled={loading}
             >
-              {loading ? "Logging in..." : "Login"}
+              {loading ? "Registering..." : "Register"}
             </Button>
           </form>
-
-          <div className="text-center text-sm text-muted-foreground mt-6">
-            <p>Your university email will be verified.</p>
-          </div>
         </div>
       </main>
     </div>
   );
 };
 
-export default Login;
+export default Register;

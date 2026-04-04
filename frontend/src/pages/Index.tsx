@@ -16,9 +16,15 @@ const Index = () => {
           <p className="text-muted-foreground mb-8">
             A one stop solution to buy and sell items.
           </p>
-          <Button size="lg" onClick={() => navigate("/login")} className="px-10">
-            Login
-          </Button>
+
+          <div className="flex flex-col gap-3">
+            <Button size="lg" onClick={() => navigate("/login")} className="px-10">
+              Login
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/register")} className="px-10">
+              Register
+            </Button>
+          </div>
         </div>
       </main>
     </div>
