@@ -338,3 +338,7 @@ describe("listingService", () => {
     });
   });
 });
+
+describe("getListings controller", () => {
+
+})

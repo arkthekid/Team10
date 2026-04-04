@@ -348,3 +348,7 @@ describe("listingController", () => {
     });
   });
 });
+
+describe("getListings controller", () => {
+
+})

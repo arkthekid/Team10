@@ -4,7 +4,7 @@ import { User } from "../entities/User";
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: JwtPayload; // id, email, role
     }
   }
 }
