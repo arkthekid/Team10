@@ -29,6 +29,7 @@ describe("listingController", () => {
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
+      send: jest.fn(),
     };
 
     next = jest.fn();
@@ -38,23 +39,22 @@ describe("listingController", () => {
 
   describe("createListing", () => {
     it("should call service with body and userId and return 201", async () => {
-      req.body = { title: "Test Listing" };
+      req.body = { name: "Desk", price: 120 };
 
       (getUserId as jest.Mock).mockReturnValue("user123");
-      const mockListing = { _id: "1", title: "Test Listing" };
-      (listingService.createListing as jest.Mock).mockResolvedValue(mockListing); // mock return values for service
+      const mockListing = { listingId: "1", name: "Desk", price: 120 };
+      (listingService.createListing as jest.Mock).mockResolvedValue(mockListing);
 
       await createListing(req as Request, res as Response, next);
-      
-      // check that createListing controller is working
-      expect(getUserId).toHaveBeenCalledWith(req); // getUserID is called
-      expect(listingService.createListing).toHaveBeenCalledWith(req.body, "user123"); // createListing service is called
-      expect(res.status).toHaveBeenCalledWith(201); // response status is 201
-      expect(res.json).toHaveBeenCalledWith(mockListing); // response body matches
+
+      expect(getUserId).toHaveBeenCalledWith(req);
+      expect(listingService.createListing).toHaveBeenCalledWith(req.body, "user123");
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(mockListing);
     });
 
     it("should call next with error if user is unauthorized", async () => {
-      req.body = { title: "Test Listing" };
+      req.body = { name: "Desk", price: 120 };
 
       const error = new AppError("Unauthorized");
       (getUserId as jest.Mock).mockImplementation(() => {
@@ -64,12 +64,12 @@ describe("listingController", () => {
       await createListing(req as Request, res as Response, next);
 
       expect(getUserId).toHaveBeenCalledWith(req);
-      expect(next).toHaveBeenCalledWith(error); // next (Error) is called
-      expect(listingService.createListing).not.toHaveBeenCalled(); // service is not called
+      expect(next).toHaveBeenCalledWith(error);
+      expect(listingService.createListing).not.toHaveBeenCalled();
     });
 
     it("should call next(error) if service throws an error", async () => {
-      req.body = { title: "Test Listing" };
+      req.body = { name: "Desk", price: 120 };
 
       (getUserId as jest.Mock).mockReturnValue("user123");
       const error = new Error("Service failed");
@@ -82,7 +82,7 @@ describe("listingController", () => {
     });
 
     it("should not send response if getUserId throws", async () => {
-      req.body = { title: "Test Listing" };
+      req.body = { name: "Desk", price: 120 };
 
       const error = new AppError("Unauthorized");
       (getUserId as jest.Mock).mockImplementation(() => {
@@ -94,6 +94,7 @@ describe("listingController", () => {
       expect(next).toHaveBeenCalledWith(error);
       expect(res.status).not.toHaveBeenCalled();
       expect(res.json).not.toHaveBeenCalled();
+      expect(res.send).not.toHaveBeenCalled();
     });
   });
 
@@ -110,7 +111,13 @@ describe("listingController", () => {
 
       await getListings(req as Request, res as Response, next);
 
-      expect(listingService.getListings).toHaveBeenCalledWith(req.query);
+      expect(listingService.getListings).toHaveBeenCalledWith({
+        category: "furniture",
+        sortBy: "createdAt",
+        order: "DESC",
+        page: 1,
+        limit: 10,
+      });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockListings);
     });
@@ -132,9 +139,85 @@ describe("listingController", () => {
 
       await getListings(req as Request, res as Response, next);
 
-      expect(listingService.getListings).toHaveBeenCalledWith({});
+      expect(listingService.getListings).toHaveBeenCalledWith({
+        sortBy: "createdAt",
+        order: "DESC",
+        page: 1,
+        limit: 10,
+      });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockListings);
+    });
+
+    it("should transform query params before calling service", async () => {
+      req.query = {
+        search: "desk",
+        category: "furniture",
+        sortBy: "price",
+        order: "ASC",
+        minPrice: "50",
+        maxPrice: "200",
+        page: "2",
+        limit: "5",
+      };
+
+      const mockListings = [{ listingId: "1", name: "Desk" }];
+      (listingService.getListings as jest.Mock).mockResolvedValue(mockListings);
+
+      await getListings(req as Request, res as Response, next);
+
+      expect(listingService.getListings).toHaveBeenCalledWith({
+        search: "desk",
+        category: "furniture",
+        sortBy: "price",
+        order: "ASC",
+        minPrice: 50,
+        maxPrice: 200,
+        page: 2,
+        limit: 5,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockListings);
+    });
+
+    it("should omit optional filters when they are not provided", async () => {
+      req.query = {
+        page: "3",
+        limit: "2",
+      };
+
+      const mockListings = [{ listingId: "1", name: "Desk" }];
+      (listingService.getListings as jest.Mock).mockResolvedValue(mockListings);
+
+      await getListings(req as Request, res as Response, next);
+
+      expect(listingService.getListings).toHaveBeenCalledWith({
+        sortBy: "createdAt",
+        order: "DESC",
+        page: 3,
+        limit: 2,
+      });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(mockListings);
+    });
+
+    it("should convert only minPrice when maxPrice is not provided", async () => {
+      req.query = {
+        minPrice: "75",
+      };
+
+      const mockListings = [{ listingId: "1", name: "Desk" }];
+      (listingService.getListings as jest.Mock).mockResolvedValue(mockListings);
+
+      await getListings(req as Request, res as Response, next);
+
+      expect(listingService.getListings).toHaveBeenCalledWith({
+        sortBy: "createdAt",
+        order: "DESC",
+        page: 1,
+        limit: 10,
+        minPrice: 75,
+      });
     });
   });
 
@@ -171,7 +254,7 @@ describe("listingController", () => {
 
       expect(next).toHaveBeenCalledWith(error);
     });
-    
+
     it("should not send response when id is missing", async () => {
       req.params = {} as any;
 
@@ -180,6 +263,7 @@ describe("listingController", () => {
       expect(next).toHaveBeenCalledWith(expect.any(AppError));
       expect(res.status).not.toHaveBeenCalled();
       expect(res.json).not.toHaveBeenCalled();
+      expect(res.send).not.toHaveBeenCalled();
     });
   });
 
@@ -243,6 +327,22 @@ describe("listingController", () => {
       expect(listingService.updateListing).not.toHaveBeenCalled();
       expect(next).toHaveBeenCalledWith(expect.any(AppError));
     });
+
+    it("should not send response if update service throws", async () => {
+      req.params = { id: "listing-1" };
+      req.body = { name: "Updated Desk" };
+
+      (getUserId as jest.Mock).mockReturnValue("user123");
+      const error = new Error("Unauthorized");
+      (listingService.updateListing as jest.Mock).mockRejectedValue(error);
+
+      await updateListing(req as Request<{ id: string }>, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
+      expect(res.status).not.toHaveBeenCalled();
+      expect(res.json).not.toHaveBeenCalled();
+      expect(res.send).not.toHaveBeenCalled();
+    });
   });
 
   describe("deleteListing", () => {
@@ -259,7 +359,8 @@ describe("listingController", () => {
       expect(getUserId).toHaveBeenCalledWith(req);
       expect(listingService.deleteListing).toHaveBeenCalledWith("listing-1", "user123");
       expect(res.status).toHaveBeenCalledWith(204);
-      expect(res.json).toHaveBeenCalledWith(null);
+      expect(res.send).toHaveBeenCalled();
+      expect(res.json).not.toHaveBeenCalled();
     });
 
     it("should call next with AppError when id is missing", async () => {
@@ -291,6 +392,21 @@ describe("listingController", () => {
       expect(getUserId).not.toHaveBeenCalled();
       expect(listingService.deleteListing).not.toHaveBeenCalled();
       expect(next).toHaveBeenCalledWith(expect.any(AppError));
+    });
+
+    it("should not send response if delete service throws", async () => {
+      req.params = { id: "listing-1" };
+
+      (getUserId as jest.Mock).mockReturnValue("user123");
+      const error = new Error("Listing not found");
+      (listingService.deleteListing as jest.Mock).mockRejectedValue(error);
+
+      await deleteListing(req as Request<{ id: string }>, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
+      expect(res.status).not.toHaveBeenCalled();
+      expect(res.json).not.toHaveBeenCalled();
+      expect(res.send).not.toHaveBeenCalled();
     });
   });
 
@@ -346,9 +462,18 @@ describe("listingController", () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith([]);
     });
+
+    it("should not send response if getMyListings service throws", async () => {
+      (getUserId as jest.Mock).mockReturnValue("user123");
+      const error = new Error("Failed to fetch my listings");
+      (listingService.getMyListings as jest.Mock).mockRejectedValue(error);
+
+      await getMyListings(req as Request, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
+      expect(res.status).not.toHaveBeenCalled();
+      expect(res.json).not.toHaveBeenCalled();
+      expect(res.send).not.toHaveBeenCalled();
+    });
   });
 });
-
-describe("getListings controller", () => {
-
-})

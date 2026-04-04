@@ -47,6 +47,13 @@ describe("listingRoutes", () => {
     expect(listingController.getMyListings).toHaveBeenCalled();
   });
 
+  it("GET /listings/me should not route to getListingById", async () => {
+    await request(app).get("/listings/me");
+
+    expect(listingController.getMyListings).toHaveBeenCalled();
+    expect(listingController.getListingById).not.toHaveBeenCalled();
+  });
+
   it("GET /listings/:id routes to getListingById controller", async () => {
     const res = await request(app).get("/listings/123");
 

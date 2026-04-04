@@ -44,6 +44,27 @@ describe("listingService", () => {
       expect(result).toEqual(mockSavedListing); // correct return
     });
 
+    it("should overwrite incoming sellerId with authenticated userId", async () => {
+      const mockCreatedListing: any = {
+        name: "Desk",
+        sellerId: "bad-user",
+      };
+
+      const mockRepo = {
+        create: jest.fn().mockReturnValue(mockCreatedListing),
+        save: jest.fn().mockImplementation(async (listing) => listing),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      const result = await listingService.createListing(
+        { name: "Desk", sellerId: "bad-user" } as Partial<Listing>,
+        "user123",
+      );
+
+      expect(result.sellerId).toBe("user123");
+    });
+
     it("should throw error if repository is not found", async () => {
       (AppDataSource.getRepository as jest.Mock).mockImplementation(() => {
         throw new Error("Repo not found");
@@ -337,8 +358,256 @@ describe("listingService", () => {
       ).rejects.toThrow("Delete failed");
     });
   });
+  describe("getListings", () => {
+    it("should return listings with default sorting and pagination", async () => {
+      const mockQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest
+          .fn()
+          .mockResolvedValue([{ listingId: "1", name: "Desk" }]),
+      };
+
+      const mockRepo = {
+        createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      const result = await listingService.getListings({});
+
+      expect(AppDataSource.getRepository).toHaveBeenCalledWith(Listing);
+      expect(mockRepo.createQueryBuilder).toHaveBeenCalledWith("listing");
+      expect(mockQb.orderBy).toHaveBeenCalledWith("listing.createdAt", "DESC");
+      expect(mockQb.skip).toHaveBeenCalledWith(0);
+      expect(mockQb.take).toHaveBeenCalledWith(10);
+      expect(result).toEqual([{ listingId: "1", name: "Desk" }]);
+    });
+
+    it("should apply category filter", async () => {
+      const mockQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockRepo = {
+        createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await listingService.getListings({ category: "furniture" });
+
+      expect(mockQb.where).toHaveBeenCalledWith(
+        "listing.category = :category",
+        { category: "furniture" },
+      );
+    });
+
+    it("should apply minPrice and maxPrice filters", async () => {
+      const mockQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockRepo = {
+        createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await listingService.getListings({ minPrice: 50, maxPrice: 200 });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        "listing.price >= :minPrice",
+        { minPrice: 50 },
+      );
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        "listing.price <= :maxPrice",
+        { maxPrice: 200 },
+      );
+    });
+
+    it("should apply search filter", async () => {
+      const mockQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockRepo = {
+        createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await listingService.getListings({ search: "desk" });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        "listing.name ILIKE :search OR listing.description ILIKE :search",
+        { search: "%desk%" },
+      );
+    });
+
+    it("should use custom sorting and pagination", async () => {
+      const mockQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockRepo = {
+        createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await listingService.getListings({
+        sortBy: "price",
+        order: "ASC",
+        page: 2,
+        limit: 5,
+      });
+
+      expect(mockQb.orderBy).toHaveBeenCalledWith("listing.price", "ASC");
+      expect(mockQb.skip).toHaveBeenCalledWith(5);
+      expect(mockQb.take).toHaveBeenCalledWith(5);
+    });
+
+    it("should throw error if query builder fails", async () => {
+      const mockQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockRejectedValue(new Error("Query failed")),
+      };
+
+      const mockRepo = {
+        createQueryBuilder: jest.fn().mockReturnValue(mockQb),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await expect(listingService.getListings({})).rejects.toThrow(
+        "Query failed",
+      );
+    });
+  });
+
+  describe("getListingById", () => {
+    it("should return a listing when it exists", async () => {
+      const mockListing = {
+        listingId: "listing-1",
+        sellerId: "user123",
+        name: "Desk",
+      };
+
+      const mockRepo = {
+        findOne: jest.fn().mockResolvedValue(mockListing),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      const result = await listingService.getListingById("listing-1");
+
+      expect(AppDataSource.getRepository).toHaveBeenCalledWith(Listing);
+      expect(mockRepo.findOne).toHaveBeenCalledWith({
+        where: { listingId: "listing-1" },
+      });
+      expect(result).toEqual(mockListing);
+    });
+
+    it("should throw error when listing does not exist", async () => {
+      const mockRepo = {
+        findOne: jest.fn().mockResolvedValue(null),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await expect(listingService.getListingById("missing-id")).rejects.toThrow(
+        "Listing not found",
+      );
+    });
+
+    it("should throw error if findOne fails", async () => {
+      const mockRepo = {
+        findOne: jest.fn().mockRejectedValue(new Error("Find failed")),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await expect(listingService.getListingById("listing-1")).rejects.toThrow(
+        "Find failed",
+      );
+    });
+  });
+
+  describe("getMyListings", () => {
+    it("should return current user's listings", async () => {
+      const mockListings = [
+        { listingId: "1", sellerId: "user123", name: "Desk" },
+        { listingId: "2", sellerId: "user123", name: "Chair" },
+      ];
+
+      const mockRepo = {
+        find: jest.fn().mockResolvedValue(mockListings),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      const result = await listingService.getMyListings("user123");
+
+      expect(AppDataSource.getRepository).toHaveBeenCalledWith(Listing);
+      expect(mockRepo.find).toHaveBeenCalledWith({
+        where: { sellerId: "user123" },
+      });
+      expect(result).toEqual(mockListings);
+    });
+
+    it("should return empty array when user has no listings", async () => {
+      const mockRepo = {
+        find: jest.fn().mockResolvedValue([]),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      const result = await listingService.getMyListings("user123");
+
+      expect(mockRepo.find).toHaveBeenCalledWith({
+        where: { sellerId: "user123" },
+      });
+      expect(result).toEqual([]);
+    });
+
+    it("should throw error if find fails", async () => {
+      const mockRepo = {
+        find: jest.fn().mockRejectedValue(new Error("Find failed")),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await expect(listingService.getMyListings("user123")).rejects.toThrow(
+        "Find failed",
+      );
+    });
+  });
 });
-
-describe("getListings controller", () => {
-
-})
