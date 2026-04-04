@@ -1,8 +1,6 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError";
 import * as listingService from "../services/listingService";
-import { asyncHandler } from "../middleware/asyncHandler";
 import { getUserId } from "../utils/getUserId";
 
 
