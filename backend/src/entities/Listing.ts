@@ -37,7 +37,7 @@ export class Listing {
   category!: Category;
 
   @Column("text", { nullable: true })
-  imageUrl?: string | null;
+  imageUrl!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

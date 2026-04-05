@@ -7,4 +7,5 @@ export interface GetListingDto {
     maxPrice?: number;
     page?: number;
     limit?: number;
+    imageUrl?: string | null;
 }
