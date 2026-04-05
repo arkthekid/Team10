@@ -1,8 +1,6 @@
-import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "../utils/AppError";
 import * as listingService from "../services/listingService";
-import { asyncHandler } from "../middleware/asyncHandler";
 import { getUserId } from "../utils/getUserId";
 import { GetListingDto } from "../dto/getListing.dto";
 
@@ -70,7 +68,7 @@ export const getListingById = async (req: Request<{ id: string }>, res: Response
   } catch (error) {
     next(error);
   }
-}
+};
 
 
 export const updateListing = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
@@ -88,10 +86,14 @@ export const updateListing = async (req: Request<{ id: string }>, res: Response,
   } catch (error) {
     next(error);
   }
-}
+};
 
 
-export const deleteListing = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+export const deleteListing = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const { id } = req.params;
 
@@ -100,14 +102,13 @@ export const deleteListing = async (req: Request<{ id: string }>, res: Response,
     }
 
     const userId = getUserId(req);
-
     await listingService.deleteListing(id, userId);
 
-    res.status(204).json(null);
+    res.status(204).send();
   } catch (error) {
-      next(error);
+    next(error);
   }
-}
+};
 
 
 export const getMyListings = async (req: Request, res: Response, next: NextFunction) => {

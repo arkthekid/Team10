@@ -5,6 +5,11 @@ import * as authController from "../../src/controllers/authController";
 
 jest.mock("../../src/controllers/authController");
 
+// mock protect middleware so route test only checks route wiring
+jest.mock("../../src/middleware/auth", () => ({
+  protect: (req: any, res: any, next: any) => next(),
+}));
+
 describe("authRoutes", () => {
   const app = express();
   app.use(express.json());
@@ -41,5 +46,20 @@ describe("authRoutes", () => {
 
     expect(res.status).toBe(200);
     expect(authController.login).toHaveBeenCalled();
+  });
+
+  it("GET /api/auth/me calls getMe controller", async () => {
+    (authController.getMe as jest.Mock).mockImplementation((req, res) => {
+      res.status(200).json({
+        id: "123",
+        email: "arkar@umass.edu",
+        role: "user",
+      });
+    });
+
+    const res = await request(app).get("/api/auth/me");
+
+    expect(res.status).toBe(200);
+    expect(authController.getMe).toHaveBeenCalled();
   });
 });

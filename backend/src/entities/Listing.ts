@@ -1,5 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
-//import { User } from "./User";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from "typeorm";
 import { Category } from "../constants/categories";
 
 @Entity()
@@ -31,11 +36,12 @@ export class Listing {
   @Column("text")
   category!: Category;
 
+  @Column("text", { nullable: true })
+  imageUrl?: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 
   @UpdateDateColumn()
   updatedAt!: Date;
-  // @ManyToOne(() => User, (user) => user.listings)
-  // user!: User;
 }

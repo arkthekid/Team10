@@ -16,7 +16,7 @@ describe("protect middleware", () => {
 
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
-  let mockNext: NextFunction;
+  let mockNext: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -57,9 +57,21 @@ describe("protect middleware", () => {
     expect(mockNext).not.toHaveBeenCalled();
   });
 
-  it("returns 401 when token is invalid", async () => {
+  it("returns 401 when token is invalid", async () => { // invalid-token = bad token string that fails JWT verification
     mockReq.headers = {
       authorization: "Bearer invalid-token",
+    };
+
+    await protect(mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(401);
+    expect(mockRes.json).toHaveBeenCalledWith({ message: "Invalid token" });
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when token is malformed", async () => { // malformed token = token string that looks like JWT but has invalid structure (e.g. missing parts)
+    mockReq.headers = {
+      authorization: "Bearer not.a.valid.jwt",
     };
 
     await protect(mockReq as Request, mockRes as Response, mockNext);
@@ -88,6 +100,55 @@ describe("protect middleware", () => {
     });
     expect(mockRes.status).toHaveBeenCalledWith(401);
     expect(mockRes.json).toHaveBeenCalledWith({ message: "Invalid token" });
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when token is empty after Bearer", async () => {
+    mockReq.headers = {
+      authorization: "Bearer ",
+    };
+
+    await protect(mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(401);
+    expect(mockRes.json).toHaveBeenCalledWith({ message: "Missing token" });
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 when token is expired", async () => {
+    const expiredToken = jwt.sign(
+      { id: "123", email: "arkar@umass.edu", role: "user" },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "1ms" }
+    );
+
+    // wait so token expires
+    await new Promise((r) => setTimeout(r, 10));
+
+    mockReq.headers = {
+      authorization: `Bearer ${expiredToken}`,
+    };
+
+    await protect(mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(401);
+    expect(mockRes.json).toHaveBeenCalledWith({ message: "Invalid token" });
+    expect(mockNext).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 when JWT_SECRET is missing", async () => {
+    process.env.JWT_SECRET = "";
+
+    mockReq.headers = {
+      authorization: "Bearer some-token",
+    };
+
+    await protect(mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      message: "Server configuration error",
+    });
     expect(mockNext).not.toHaveBeenCalled();
   });
 

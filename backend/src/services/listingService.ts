@@ -14,38 +14,38 @@ export async function createListing(data: Partial<Listing>, userId: string) {
 
 export async function getListings(query: GetListingDto) {
   const repo = AppDataSource.getRepository(Listing);
-
   const qb = repo.createQueryBuilder("listing");
 
-  // filtering
   if (query.category) {
     qb.where("listing.category = :category", {
       category: query.category,
     });
   }
 
-  if (query.minPrice) {
+  if (query.minPrice !== undefined) {
     qb.andWhere("listing.price >= :minPrice", {
       minPrice: query.minPrice,
     });
   }
 
-  if (query.maxPrice) {
+  if (query.maxPrice !== undefined) {
     qb.andWhere("listing.price <= :maxPrice", {
       maxPrice: query.maxPrice,
     });
   }
 
   if (query.search) {
-    qb.andWhere("listing.search ILIKE :search OR listing.description ILIKE :search", {
-      search: query.search,
-    })
+    qb.andWhere(
+      "listing.name ILIKE :search OR listing.description ILIKE :search",
+      {
+        search: `%${query.search}%`,
+      }
+    );
   }
 
-  // order
   qb.orderBy(
     `listing.${query.sortBy || "createdAt"}`,
-    query.order || "DESC",
+    query.order || "DESC"
   );
 
   const page = query.page || 1;
@@ -58,17 +58,36 @@ export async function getListings(query: GetListingDto) {
 
 export async function getListingById(id: string) {
   const repo = AppDataSource.getRepository(Listing);
-  
+
   const listing = await repo.findOne({
     where: { listingId: id },
-  })
+  });
+
   if (!listing) throw new AppError("Listing not found", 404);
 
   return listing;
 }
 
-export async function updateListing(id: string, data: any, userId: string) {
-  
+export async function updateListing(
+  id: string,
+  data: Partial<Listing>,
+  userId: string
+) {
+  const repo = AppDataSource.getRepository(Listing);
+
+  const listing = await repo.findOne({
+    where: { listingId: id },
+  });
+
+  if (!listing) throw new AppError("Listing not found", 404);
+  if (listing.sellerId !== userId) throw new AppError("Unauthorized", 403);
+
+  delete data.sellerId;
+  delete data.listingId;
+
+  Object.assign(listing, data);
+
+  return await repo.save(listing);
 }
 
 export async function deleteListing(id: string, userId: string) {
@@ -77,6 +96,7 @@ export async function deleteListing(id: string, userId: string) {
   const listing = await repo.findOne({
     where: { listingId: id },
   });
+
   if (!listing) throw new AppError("Listing not found", 404);
   if (listing.sellerId !== userId) throw new AppError("Unauthorized", 403);
 
@@ -87,12 +107,8 @@ export async function deleteListing(id: string, userId: string) {
 
 export async function getMyListings(userId: string) {
   const repo = AppDataSource.getRepository(Listing);
-  
-  const myListings = await repo.find({
-    where: {sellerId: userId},
-  })
 
-  if (!myListings) return new AppError("No listing found", 404);
-
-  return myListings;
+  return await repo.find({
+    where: { sellerId: userId },
+  });
 }
