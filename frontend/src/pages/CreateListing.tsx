@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { ImagePlus, X } from "lucide-react";
 import { createListing } from "../lib/listingApi";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+
 const CreateListing = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
@@ -26,6 +28,7 @@ const CreateListing = () => {
   const [pickUpLocation, setPickUpLocation] = useState("");
   const [condition, setCondition] = useState("");
   const [images, setImages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,20 +36,65 @@ const CreateListing = () => {
     const files = e.target.files;
     if (!files) return;
 
-    const newImages: string[] = [];
+    const newPreviewUrls: string[] = [];
+    const newFiles: File[] = [];
+
     Array.from(files).forEach((file) => {
-      if (newImages.length + images.length >= 5) return;
-      const url = URL.createObjectURL(file);
-      newImages.push(url);
+      if (newPreviewUrls.length + images.length >= 5) return;
+      newPreviewUrls.push(URL.createObjectURL(file));
+      newFiles.push(file);
     });
 
-    setImages((prev) => [...prev, ...newImages].slice(0, 5));
+    setImages((prev) => [...prev, ...newPreviewUrls].slice(0, 5));
+    setImageFiles((prev) => [...prev, ...newFiles].slice(0, 5));
 
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(`${API_URL}/upload`, {
+      method: "POST",
+      body: formData,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    const text = await response.text();
+    let data: any = {};
+
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { raw: text };
+    }
+
+    console.log("UPLOAD STATUS:", response.status);
+    console.log("UPLOAD RESPONSE:", data);
+
+    if (!response.ok) {
+      throw new Error(data.message || data.error || "Image upload failed");
+    }
+
+    return (
+      data.imageUrl ||
+      data.url ||
+      data.publicUrl ||
+      data.data?.imageUrl ||
+      data.data?.url ||
+      data.data?.publicUrl ||
+      ""
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,18 +102,32 @@ const CreateListing = () => {
     setLoading(true);
 
     try {
-      await createListing({
+      let uploadedImageUrl = "";
+
+      if (imageFiles.length > 0) {
+        uploadedImageUrl = await uploadImage(imageFiles[0]);
+        console.log("FINAL IMAGE URL:", uploadedImageUrl);
+      }
+
+      const payload = {
         name: title,
         description,
         price: price === "" ? 0 : Number(price),
         pickUpLocation,
         condition,
         category,
-      });
+        imageUrl: uploadedImageUrl,
+      };
+
+      console.log("LISTING PAYLOAD:", payload);
+
+      const result = await createListing(payload);
+      console.log("CREATE LISTING RESPONSE:", result);
 
       toast.success("Listing created successfully!");
       navigate("/browse");
     } catch (err: any) {
+      console.error("CREATE LISTING ERROR:", err);
       toast.error(err.message || "Failed to create listing");
     } finally {
       setLoading(false);
