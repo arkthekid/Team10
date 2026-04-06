@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
@@ -75,9 +75,7 @@
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 0 66% 42%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }

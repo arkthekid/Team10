@@ -19,6 +19,7 @@ export async function createListing(listingData: {
   pickUpLocation: string;
   condition: string;
   category: string;
+  imageUrl?: string;
 }) {
   return apiFetch("/listings", {
     method: "POST",
