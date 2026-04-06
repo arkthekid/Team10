@@ -22,7 +22,7 @@ export function createApp() {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/listings", listingRoutes);
-  app.use("api/upload", uploadRoutes);
+  app.use("/api/upload", uploadRoutes);
 
   app.use(errorHandler);
 
