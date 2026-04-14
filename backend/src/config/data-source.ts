@@ -2,6 +2,7 @@ import "dotenv/config";
 import { DataSource } from "typeorm";
 import { Listing } from "../entities/Listing";
 import { User } from "../entities/User";
+import { Favorite } from "../entities/Favorite";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -16,5 +17,5 @@ export const AppDataSource = new DataSource({
   // synchronize: true, // auto table creation
   synchronize: true, // ✅ CHANGED: disable in production (use migrations instead)
   logging: false,
-  entities: [Listing, User],
+  entities: [Listing, User, Favorite],
 });
