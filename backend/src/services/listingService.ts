@@ -1,13 +1,14 @@
 import { AppError } from "../utils/AppError";
 import { AppDataSource } from "../config/data-source";
 import { Listing } from "../entities/Listing";
+import { User } from "../entities/User";
 import { GetListingDto } from "../dto/getListing.dto";
 
 export async function createListing(data: Partial<Listing>, userId: string) {
   const listingRepository = AppDataSource.getRepository(Listing);
 
   const listing = listingRepository.create(data);
-  listing.sellerId = userId;
+  listing.seller = { id: userId } as User;
 
   return await listingRepository.save(listing);
 }
@@ -109,6 +110,28 @@ export async function getMyListings(userId: string) {
   const repo = AppDataSource.getRepository(Listing);
 
   return await repo.find({
-    where: { sellerId: userId },
+    where: { seller: { id: userId } },
   });
 }
+
+// export async function markAsSold(listingId: string, sellerId: string) {
+//   const repo = AppDataSource.getRepository(Listing);
+
+//   const listing = await repo.find({
+//     where: {listingId: listingId, sellerId: sellerId},
+//   })
+
+//   if (!listing) {
+//     throw new AppError("Listing not found or you are not the seller");
+//   }
+
+//   if (listing.status != "available") {
+//     throw new AppError(`Cannot mark as sold. Listing current status is: ${listing.status}`);
+//   }
+
+//   listing.status = "sold_pending";
+//   listing.buyerId = buyerId;
+//   listing.sellerMarkedSoldAt = new Date();
+
+//   return listing;
+// }
