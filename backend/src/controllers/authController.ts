@@ -19,23 +19,15 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
   return res.json(req.user);
 });
 
-export const logout = asyncHandler(async (req: Request, res: Response) => {
-  try {
-    res.clearCookie("accessToken", {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-    });
-  }
-  catch (error) {
-    return res.status(500).json({
-      message: "logout failed",
-    })
-  }
-})
 export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
   const { idToken } = req.body;
   if (!idToken) throw new AppError("Google ID token is required", 400);
   const result = await googleAuthService.googleLogin(idToken);
   return res.json(result);
 });
+
+export const logout = asyncHandler(async (req: Request, res: Response) => {
+  return res.status(200).json({
+    message: "Logged out successfully",
+  })
+})
