@@ -34,11 +34,8 @@ describe("Listings API", () => {
   });
 
   beforeEach(async () => {
-    const listingRepo = AppDataSource.getRepository(Listing);
-    const userRepo = AppDataSource.getRepository(User);
-
-    await listingRepo.clear();
-    await userRepo.clear();
+    await AppDataSource.createQueryBuilder().delete().from(Listing).execute();
+    await AppDataSource.createQueryBuilder().delete().from(User).execute();
   });
 
   afterAll(async () => {

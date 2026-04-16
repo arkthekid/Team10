@@ -1,7 +1,8 @@
 import request from "supertest";
 import { createApp } from "../../src/app";
-import { AppDataSource } from "../../src/config/data-source"; // ✅ ADDED: needed to initialize DB for tests
-import { User } from "../../src/entities/User"; // ✅ ADDED: needed to clear users between tests
+import { AppDataSource } from "../../src/config/data-source";
+import { User } from "../../src/entities/User";
+import { Listing } from "../../src/entities/Listing";
 
 const app = createApp();
 
@@ -11,24 +12,18 @@ const uniqueEmail = () =>
 describe("Auth API", () => {
   beforeAll(async () => {
     if (!AppDataSource.isInitialized) {
-      await AppDataSource.initialize(); 
-      // ✅ ADDED: initialize TypeORM connection before running API tests
-      // prevents 500 errors when accessing DB
+      await AppDataSource.initialize();
     }
   });
 
   beforeEach(async () => {
-    const userRepo = AppDataSource.getRepository(User);
-    await userRepo.clear(); 
-    // ✅ ADDED: clear DB before each test
-    // ensures tests don’t interfere (e.g., duplicate email issues)
+    await AppDataSource.createQueryBuilder().delete().from(Listing).execute();
+    await AppDataSource.createQueryBuilder().delete().from(User).execute();
   });
 
   afterAll(async () => {
     if (AppDataSource.isInitialized) {
-      await AppDataSource.destroy(); 
-      // ✅ ADDED: close DB connection after tests
-      // prevents open handles / memory leaks
+      await AppDataSource.destroy();
     }
   });
 
@@ -43,8 +38,7 @@ describe("Auth API", () => {
     expect(res.body.token).toBeTruthy();
     expect(res.body.user).toBeTruthy();
     expect(res.body.user.id).toBeTruthy();
-    expect(res.body.user.name).toBe("Gayatri"); 
-    // ✅ FIXED: was "Arkar" before → now matches input
+    expect(res.body.user.name).toBe("Gayatri");
     expect(res.body.user.umassEmail).toMatch(/@umass\.edu$/);
     expect(res.body.user.role).toBe("user");
   });

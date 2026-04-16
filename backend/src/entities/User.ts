@@ -1,5 +1,7 @@
 // src/entities/User.ts
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+import { Listing } from "./Listing"
+import { Favorite } from "./Favorite";
 
 @Entity()
 export class User {
@@ -17,4 +19,13 @@ export class User {
 
   @Column("text", {default: "user"})
   role!: "user" | "admin"; // ensures only "user" or "admin" roles are allowed (used in JWT and future auth checks)
+
+  @OneToMany(() => Listing, (listing) => listing.seller)
+  listings!: Listing[];
+
+  @OneToMany(() => Listing, (listing) => listing.buyer)
+  purchases!: Listing[];
+
+  @OneToMany(() => Favorite, (favorite) => favorite.userId)
+  favorites!: Favorite[];
 }

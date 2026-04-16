@@ -1,7 +1,8 @@
 import request from "supertest";
 import { createApp } from "../../src/app";
-import { AppDataSource } from "../../src/config/data-source"; // ✅ ADDED: needed to initialize DB for API tests
-import { User } from "../../src/entities/User"; // ✅ ADDED: needed to clear user data between tests
+import { AppDataSource } from "../../src/config/data-source";
+import { User } from "../../src/entities/User";
+import { Listing } from "../../src/entities/Listing";
 
 const app = createApp();
 
@@ -10,24 +11,18 @@ const uniqueEmail = () => `amoemyint+${Date.now()}@umass.edu`;
 describe("Auth", () => {
   beforeAll(async () => {
     if (!AppDataSource.isInitialized) {
-      await AppDataSource.initialize(); 
-      // ✅ ADDED: initialize database connection before tests run
-      // prevents 500 errors when hitting endpoints that use the DB
+      await AppDataSource.initialize();
     }
   });
 
   beforeEach(async () => {
-    const userRepo = AppDataSource.getRepository(User);
-    await userRepo.clear(); 
-    // ✅ ADDED: clear users before each test
-    // ensures tests don’t interfere with each other (e.g., duplicate emails)
+    await AppDataSource.createQueryBuilder().delete().from(Listing).execute();
+    await AppDataSource.createQueryBuilder().delete().from(User).execute();
   });
 
   afterAll(async () => {
     if (AppDataSource.isInitialized) {
-      await AppDataSource.destroy(); 
-      // ✅ ADDED: close DB connection after tests
-      // prevents open handles / memory leaks in Jest
+      await AppDataSource.destroy();
     }
   });
 
