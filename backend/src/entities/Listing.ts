@@ -6,11 +6,17 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+<<<<<<< HEAD
   OneToOne,
 } from "typeorm";
 import { Category } from "../constants/categories";
 import { User } from "./User"
 import { Conversation } from "./Conversation";
+=======
+} from "typeorm";
+import { Category } from "../constants/categories";
+import { User } from "./User"
+>>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
 
 export type ListingStatus = "available" | "sold_pending" | "completed";
 
@@ -55,14 +61,24 @@ export class Listing {
   @UpdateDateColumn()
   updatedAt!: Date;
 
+<<<<<<< HEAD
   // buyer and seller
   @Column("text")
   sellerId!: string;
 
+=======
+  @Column("text")
+  sellerId!: string;
+
+  @Column("text", {nullable: true})
+  buyerId?: string;
+
+>>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
   @ManyToOne(() => User, (user) => user.listings)
   @JoinColumn({ name: "sellerId"})
   seller!: User;
 
+<<<<<<< HEAD
   @Column("text")
   buyerId!: string;
 
@@ -73,4 +89,9 @@ export class Listing {
   // conversation
   @ManyToOne(() => Conversation, (convesation) => convesation.listing)
   conversation?: Conversation;
+=======
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: "buyerId" })
+  buyer?: User;
+>>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
 }

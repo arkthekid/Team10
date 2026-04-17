@@ -5,8 +5,11 @@ import { User } from "../entities/User";
 import { Favorite } from "../entities/Favorite";
 import { Conversation } from "../entities/Conversation";
 import { Message } from "../entities/Message";
+<<<<<<< HEAD
 
 console.log("DATABASE_URL:", process.env.DATABASE_URL);
+=======
+>>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
 
 export const AppDataSource = new DataSource({
   type: "postgres",
