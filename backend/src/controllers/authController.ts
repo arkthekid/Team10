@@ -30,3 +30,10 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     message: "Logged out successfully",
   });
 });
+
+export const verifyEmailController = asyncHandler(async (req: Request, res: Response) => {
+  const { token } = req.query as { token: string };
+  if (!token) throw new AppError("Verification token is required", 400);
+  const result = await authService.verifyEmail(token);
+  return res.json(result);
+});

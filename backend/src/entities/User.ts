@@ -17,8 +17,14 @@ export class User {
   @Column("text")
   passwordHash!: string; 
 
-  @Column("text", {default: "user"})
-  role!: "user" | "admin"; // ensures only "user" or "admin" roles are allowed (used in JWT and future auth checks)
+  @Column("text", { default: "user" })
+  role!: "user" | "admin";
+
+  @Column({ type: "boolean", default: false })
+  isVerified!: boolean;
+
+  @Column({ type: "text", nullable: true })
+  verificationToken!: string | null;
 
   @OneToMany(() => Listing, (listing) => listing.seller)
   listings!: Listing[];
