@@ -23,13 +23,10 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
   if (!idToken) throw new AppError("Google ID token is required", 400);
   const result = await googleAuthService.googleLogin(idToken);
   return res.json(result);
-<<<<<<< HEAD
 });
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json({
     message: "Logged out successfully",
   });
-=======
->>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
 });
