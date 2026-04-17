@@ -23,12 +23,6 @@ export class Message {
   @Column("text")
   body!: string;
 
-<<<<<<< HEAD
-=======
-  @Column({ default: false })
-  isRead!: boolean;
-
->>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
   @CreateDateColumn()
   createdAt!: Date;
 

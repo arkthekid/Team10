@@ -15,14 +15,10 @@ import { Message } from "./Message";
 @Entity()
 export class Conversation {
   @PrimaryGeneratedColumn("uuid")
-<<<<<<< HEAD
-  conversationId!: string;
-=======
   id!: string;
 
   @Column("text")
   listingId!: string;
->>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
 
   @Column("text")
   buyerId!: string;
@@ -30,24 +26,15 @@ export class Conversation {
   @Column("text")
   sellerId!: string;
 
-<<<<<<< HEAD
-=======
-  @Column({ default: false })
+  @Column({ type: "boolean", default: false })
   isArchived!: boolean;
 
->>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
   @CreateDateColumn()
   createdAt!: Date;
 
   @UpdateDateColumn()
   updatedAt!: Date;
 
-<<<<<<< HEAD
-  @Column("text")
-  listingId!: string;
-
-=======
->>>>>>> 1e1330c5bca129a452dff4527f2aa4016a805df5
   @ManyToOne(() => Listing)
   @JoinColumn({ name: "listingId" })
   listing!: Listing;
