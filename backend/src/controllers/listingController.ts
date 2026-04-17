@@ -123,23 +123,16 @@ export const getMyListings = async (req: Request, res: Response, next: NextFunct
   }
 };
 
-// export const markAsSold = async (req: Request, res: Response, next: NextFunction) => {
-//   try {
-//     const sellerId = getUserId(req);
-//     const { id: listingId } = req.params;
-//     const { buyerId } = req.body;
+export const markAsSold = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sellerId = getUserId(req);
+    const { conversationId: conversationId } = req.params;
 
-//     if (!buyerId) {
-//       res.status(400).json({
-//         message: "Buyer ID is required to mark as sold";
-//       })
-//     }
+    const updatedListing = await conversationService.markAsSold(sellerId, conversationId);
 
-//     const updatedListing = await listingService.markAsSold(listingId, sellerId, buyerId);
-
-//     res.status(200).json(updatedListing);
-//   }
-//   catch (error) {
-//     next(error);
-//   }
-// }
+    res.status(200).json(updatedListing);
+  }
+  catch (error) {
+    next(error);
+  }
+}

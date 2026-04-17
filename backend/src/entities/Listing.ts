@@ -6,9 +6,11 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToOne,
 } from "typeorm";
 import { Category } from "../constants/categories";
 import { User } from "./User"
+import { Conversation } from "./Conversation";
 
 export type ListingStatus = "available" | "sold_pending" | "completed";
 
@@ -60,4 +62,7 @@ export class Listing {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: "buyerId" })
   buyer?: User;
+
+  @ManyToOne(() => Conversation, (convesation) => convesation.listing)
+  conversation?: Conversation;
 }
