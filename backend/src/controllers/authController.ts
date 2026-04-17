@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../middleware/asyncHandler";
 import * as authService from "../services/authService";
-import { measureMemory } from "node:vm";
 import * as googleAuthService from "../services/googleAuthService";
 import { AppError } from "../utils/AppError";
 
@@ -29,5 +28,5 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
 export const logout = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json({
     message: "Logged out successfully",
-  })
-})
+  });
+});

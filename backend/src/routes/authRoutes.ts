@@ -9,6 +9,5 @@ router.post("/login", login);
 router.get("/me", protect, getMe);
 router.get("/logout", protect, logout);
 router.post("/google", googleAuth);
-router.post("/logout", protect, logout);
 
 export default router;
