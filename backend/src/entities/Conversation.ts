@@ -23,9 +23,6 @@ export class Conversation {
   @Column("text")
   sellerId!: string;
 
-  @Column({ default: false })
-  isArchived!: boolean;
-
   @CreateDateColumn()
   createdAt!: Date;
 
