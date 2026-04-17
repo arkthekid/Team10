@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as conversationService from "../services/conversationService";
 import { getUserId } from "../utils/getUserId";
+import { error } from "node:console";
 
 export const startConversation = async (req: Request<{ listingId: string }>, res: Response, next: NextFunction) => {
   try {
@@ -55,3 +56,16 @@ export const deleteConversation = async (req: Request<{ conversationId: string }
     next(error);
   }
 };
+
+export const markAsCompleted = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const buyerId = getUserId(req);
+        const conversationId = req.params.conversationId as string;
+
+        const updatedListing = await conversationService.markAsReceived(conversationId, buyerId);
+        res.status(200).json(updatedListing);
+    }
+    catch (error) {
+        next(error);
+    }
+}

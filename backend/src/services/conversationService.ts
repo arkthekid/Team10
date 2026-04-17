@@ -76,3 +76,22 @@ export const deleteConversation = async (conversationId: string, userId: string)
 
   await conversationRepo().remove(conversation);
 };
+
+export async function markAsReceived(conversationId: string, userId: string) {
+  const repo = AppDataSource.getRepository(Conversation);
+  const conversation = await repo.findOne({
+    where: { conversationId },
+    relations: ["listing"],
+  });
+  if (!conversation) throw new AppError("Conversation not found");
+
+  if (!conversation.listing) throw new AppError("Listing not found");
+  if (conversation.listing.buyerId != userId) throw new AppError("Only the buyer can mark a listing as received");
+  if (conversation.listing.status != "sold_pending") throw new AppError("Seller has to confirm the order first");
+
+  conversation.listing.status = "completed";
+  conversation.listing.buyerMarkedReceivedAt = new Date();
+
+  const listingRepo = AppDataSource.getRepository(Listing);
+  return listingRepo.save(conversation.listing);
+}
