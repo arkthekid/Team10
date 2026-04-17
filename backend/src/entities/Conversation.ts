@@ -29,9 +29,6 @@ export class Conversation {
   @Column({ default: false })
   isArchived!: boolean;
 
-  @Column({ default: false })
-  isMuted!: boolean;
-
   @CreateDateColumn()
   createdAt!: Date;
 
