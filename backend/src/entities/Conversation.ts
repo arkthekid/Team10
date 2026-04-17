@@ -15,10 +15,7 @@ import { Message } from "./Message";
 @Entity()
 export class Conversation {
   @PrimaryGeneratedColumn("uuid")
-  id!: string;
-
-  @Column("text")
-  listingId!: string;
+  conversationId!: string;
 
   @Column("text")
   buyerId!: string;
@@ -34,6 +31,9 @@ export class Conversation {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @Column("text")
+  listingId!: string;
 
   @ManyToOne(() => Listing)
   @JoinColumn({ name: "listingId" })

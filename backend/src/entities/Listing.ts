@@ -55,14 +55,22 @@ export class Listing {
   @UpdateDateColumn()
   updatedAt!: Date;
 
+  // buyer and seller
+  @Column("text")
+  sellerId!: string;
+
   @ManyToOne(() => User, (user) => user.listings)
   @JoinColumn({ name: "sellerId"})
   seller!: User;
+
+  @Column("text")
+  buyerId!: string;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: "buyerId" })
   buyer?: User;
 
+  // conversation
   @ManyToOne(() => Conversation, (convesation) => convesation.listing)
   conversation?: Conversation;
 }

@@ -122,17 +122,3 @@ export const getMyListings = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
-
-export const markAsSold = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const sellerId = getUserId(req);
-    const { conversationId: conversationId } = req.params;
-
-    const updatedListing = await conversationService.markAsSold(sellerId, conversationId);
-
-    res.status(200).json(updatedListing);
-  }
-  catch (error) {
-    next(error);
-  }
-}
