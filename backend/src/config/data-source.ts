@@ -6,8 +6,6 @@ import { Favorite } from "../entities/Favorite";
 import { Conversation } from "../entities/Conversation";
 import { Message } from "../entities/Message";
 
-console.log("DATABASE_URL:", process.env.DATABASE_URL);
-
 export const AppDataSource = new DataSource({
   type: "postgres",
   host: process.env.DB_HOST ?? "localhost",

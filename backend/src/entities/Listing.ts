@@ -6,10 +6,9 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  OneToOne,
 } from "typeorm";
 import { Category } from "../constants/categories";
-import { User } from "./User"
+import { User } from "./User";
 import { Conversation } from "./Conversation";
 
 export type ListingStatus = "available" | "sold_pending" | "completed";
@@ -34,13 +33,13 @@ export class Listing {
   @Column("text")
   category!: Category;
 
-  @Column({type: "text", default: "available"})
+  @Column({ type: "text", default: "available" })
   status!: ListingStatus;
 
-  @Column({type: "timestamp", nullable: true})
+  @Column({ type: "timestamp", nullable: true })
   sellerMarkedSoldAt!: Date | null;
 
-  @Column({type: "timestamp", nullable: true})
+  @Column({ type: "timestamp", nullable: true })
   buyerMarkedReceivedAt!: Date | null;
 
   @Column("text")
@@ -55,22 +54,20 @@ export class Listing {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  // buyer and seller
   @Column("text")
   sellerId!: string;
 
-  @ManyToOne(() => User, (user) => user.listings)
-  @JoinColumn({ name: "sellerId"})
-  seller!: User;
+  @Column("text", { nullable: true })
+  buyerId?: string;
 
-  @Column("text")
-  buyerId!: string;
+  @ManyToOne(() => User, (user) => user.listings)
+  @JoinColumn({ name: "sellerId" })
+  seller!: User;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: "buyerId" })
   buyer?: User;
 
-  // conversation
-  @ManyToOne(() => Conversation, (convesation) => convesation.listing)
+  @ManyToOne(() => Conversation, (conversation) => conversation.listing)
   conversation?: Conversation;
 }
