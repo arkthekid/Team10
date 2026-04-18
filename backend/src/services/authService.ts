@@ -121,3 +121,7 @@ export async function login(data: { umassEmail: string; password: string }) {
     },
   };
 }
+
+export async function logout() {
+  return
+}

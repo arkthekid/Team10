@@ -4,6 +4,8 @@ import { Listing } from "../entities/Listing";
 import { User } from "../entities/User";
 import { Favorite } from "../entities/Favorite";
 import { Block } from "../entities/Block";
+import { Conversation } from "../entities/Conversation";
+import { Message } from "../entities/Message";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -12,11 +14,10 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER ?? "postgres",
   password: process.env.DB_PASSWORD ?? "",
   database: process.env.DB_NAME ?? "mydb",
-
-  ssl: { rejectUnauthorized: false }, // 👈 add this for cloud DBs
-
-  // synchronize: true, // auto table creation
-  synchronize: true, // ✅ CHANGED: disable in production (use migrations instead)
+  ssl: { rejectUnauthorized: false },
+  synchronize: true,
   logging: false,
-  entities: [Listing, User, Favorite, Block],
+
+  entities: [Listing, User, Favorite, Block, Conversation, Message],
+
 });

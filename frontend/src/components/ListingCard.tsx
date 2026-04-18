@@ -7,26 +7,14 @@ interface ListingCardProps {
 const ListingCard = ({ listing }: ListingCardProps) => {
   const id = listing.listingId || listing.id || listing.productId || listing._id;
   const title = listing.name || listing.title || "Untitled Listing";
-
   const image =
-    listing.imageUrl ||
-    listing.image_url ||
     listing.image ||
-    listing.photoUrl ||
-    listing.photo_url ||
-    listing.photos?.[0] ||
-    listing.images?.[0] ||
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
-
+    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80";
   const price =
     listing.price === null || listing.price === undefined
       ? null
       : Number(listing.price);
-
-  const location =
-    listing.pickUpLocation ||
-    listing.location ||
-    "Pickup location not provided";
+  const location = listing.pickUpLocation || listing.location || "Pickup location not provided";
 
   return (
     <Link

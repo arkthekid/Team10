@@ -6,7 +6,6 @@ import authRoutes from "./routes/authRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import favoriteRoutes from "./routes/favoriteRoutes";
 import blockRoutes from "./routes/blockRoutes";
-
 import { errorHandler } from "./middleware/errorHandler";
 
 export function createApp() {
