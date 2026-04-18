@@ -3,6 +3,7 @@ import { DataSource } from "typeorm";
 import { Listing } from "../entities/Listing";
 import { User } from "../entities/User";
 import { Favorite } from "../entities/Favorite";
+import { Block } from "../entities/Block";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -17,5 +18,5 @@ export const AppDataSource = new DataSource({
   // synchronize: true, // auto table creation
   synchronize: true, // ✅ CHANGED: disable in production (use migrations instead)
   logging: false,
-  entities: [Listing, User, Favorite],
+  entities: [Listing, User, Favorite, Block],
 });

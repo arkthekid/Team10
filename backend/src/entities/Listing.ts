@@ -15,8 +15,8 @@ export class Listing {
   @Column("text")
   name!: string;
 
-  @Column("text")
-  sellerId!: string;
+  @Column("text", { nullable: true })
+  sellerId!: string | null;
 
   @Column("text")
   pickUpLocation!: string;
