@@ -78,5 +78,40 @@ describe("googleAuth controller", () => {
       expect(calledWith).toBeDefined();
       expect(calledWith.message).toBe("Must use a @umass.edu Google account");
     });
+    // Edge case - empty string idToken
+    it("calls next with 400 AppError when idToken is empty string", async () => {
+      const req = mockReq({ idToken: "" });
+      const res = mockRes();
+
+      await googleAuth(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      const calledWith = mockNext.mock.calls[0]?.[0] as unknown as AppError;
+      expect(calledWith).toBeInstanceOf(AppError);
+      expect(calledWith.message).toBe("Google ID token is required");
+    });
+
+    // Edge case - service returns user with admin role
+    it("returns token and user correctly for admin role", async () => {
+      const fakeResult = {
+        token: "fake-jwt",
+        user: {
+          id: "some-uuid",
+          name: "Admin",
+          umassEmail: "admin@umass.edu",
+          role: "admin",
+        },
+      };
+
+      mockGoogleLogin.mockResolvedValue(fakeResult);
+
+      const req = mockReq({ idToken: "fake-google-token" });
+      const res = mockRes();
+
+      await googleAuth(req, res, mockNext);
+
+      expect(res.json).toHaveBeenCalledWith(fakeResult);
+      expect(mockNext).not.toHaveBeenCalled();
+    });
   });
 });
