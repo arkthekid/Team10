@@ -9,6 +9,10 @@ jest.mock("../../src/config/data-source", () => ({
   },
 }));
 
+jest.mock("../../src/services/emailService", () => ({
+  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+}));
+
 describe("authService", () => {
   const mockRepo = {
     findOne: jest.fn(),
@@ -26,11 +30,11 @@ describe("authService", () => {
   });
 
   describe("register", () => {
-    it("registers a user successfully", async () => {
+    it("registers a user successfully and sends verification email", async () => {
       mockRepo.findOne.mockResolvedValue(null);
 
       mockRepo.create.mockImplementation((data) => ({
-        id: 1,
+        id: "some-uuid",
         role: "user",
         ...data,
       }));
@@ -43,15 +47,13 @@ describe("authService", () => {
         password: "Test1234!",
       });
 
-      expect(result.token).toBeTruthy();
+      expect(result.message).toMatch(/check your email/i);
       expect(result.user.name).toBe("Arkar");
       expect(result.user.umassEmail).toBe("arkar@umass.edu");
       expect(result.user.role).toBe("user");
-
       expect(mockRepo.findOne).toHaveBeenCalledWith({
         where: { umassEmail: "arkar@umass.edu" },
       });
-
       expect(mockRepo.create).toHaveBeenCalled();
       expect(mockRepo.save).toHaveBeenCalled();
     });
@@ -95,7 +97,7 @@ describe("authService", () => {
       mockRepo.findOne.mockResolvedValue(null);
 
       mockRepo.create.mockImplementation((data) => ({
-        id: 1,
+        id: "some-uuid",
         role: "user",
         ...data,
       }));
@@ -119,7 +121,7 @@ describe("authService", () => {
       mockRepo.findOne.mockResolvedValue(null);
 
       mockRepo.create.mockImplementation((data) => ({
-        id: 1,
+        id: "some-uuid",
         role: "user",
         ...data,
       }));
@@ -149,7 +151,7 @@ describe("authService", () => {
       mockRepo.findOne.mockResolvedValue(null);
 
       mockRepo.create.mockImplementation((data) => ({
-        id: 1,
+        id: "some-uuid",
         role: "user",
         ...data,
       }));
@@ -176,6 +178,7 @@ describe("authService", () => {
         umassEmail: "arkar@umass.edu",
         passwordHash,
         role: "user",
+        isVerified: true,
       });
 
       const result = await authService.login({
@@ -186,6 +189,26 @@ describe("authService", () => {
       expect(result.token).toBeTruthy();
       expect(result.user.name).toBe("Arkar");
       expect(result.user.umassEmail).toBe("arkar@umass.edu");
+    });
+
+    it("rejects unverified user", async () => {
+      const passwordHash = await bcrypt.hash("Test1234!", 4);
+
+      mockRepo.findOne.mockResolvedValue({
+        id: 1,
+        name: "Arkar",
+        umassEmail: "arkar@umass.edu",
+        passwordHash,
+        role: "user",
+        isVerified: false,
+      });
+
+      await expect(
+        authService.login({
+          umassEmail: "arkar@umass.edu",
+          password: "Test1234!",
+        })
+      ).rejects.toThrow("Please verify your email before logging in");
     });
 
     it("rejects unknown email", async () => {
@@ -208,6 +231,7 @@ describe("authService", () => {
         umassEmail: "arkar@umass.edu",
         passwordHash,
         role: "user",
+        isVerified: true,
       });
 
       await expect(
@@ -227,6 +251,7 @@ describe("authService", () => {
         umassEmail: "arkar@umass.edu",
         passwordHash,
         role: "user",
+        isVerified: true,
       });
 
       await authService.login({
@@ -254,6 +279,7 @@ describe("authService", () => {
         name: "Arkar",
         umassEmail: "arkar@umass.edu",
         role: "user",
+        isVerified: true,
       });
 
       await expect(
