@@ -3,6 +3,7 @@ import { DataSource } from "typeorm";
 import { Listing } from "../entities/Listing";
 import { User } from "../entities/User";
 import { Favorite } from "../entities/Favorite";
+import { Block } from "../entities/Block";
 import { Conversation } from "../entities/Conversation";
 import { Message } from "../entities/Message";
 
@@ -16,5 +17,7 @@ export const AppDataSource = new DataSource({
   ssl: { rejectUnauthorized: false },
   synchronize: true,
   logging: false,
-  entities: [Listing, User, Favorite, Conversation, Message],
+
+  entities: [Listing, User, Favorite, Block, Conversation, Message],
+
 });
