@@ -4,10 +4,31 @@ import { AppDataSource } from "../../src/config/data-source";
 import { User } from "../../src/entities/User";
 import { Listing } from "../../src/entities/Listing";
 
+jest.mock("../../src/services/emailService", () => ({
+  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+}));
+
 const app = createApp();
 
 const uniqueEmail = () =>
   `api-test+${Date.now()}-${Math.floor(Math.random() * 10000)}@umass.edu`;
+
+async function registerAndVerify(email = uniqueEmail(), name = "Test User") {
+  const res = await request(app).post("/api/auth/register").send({
+    name,
+    umassEmail: email,
+    password: "Test1234!",
+  });
+
+  expect(res.status).toBe(201);
+
+  await AppDataSource.query(
+    `UPDATE "user" SET "isVerified" = true WHERE "umassEmail" = $1`,
+    [email]
+  );
+
+  return { email, name };
+}
 
 describe("Auth API", () => {
   beforeAll(async () => {
@@ -17,8 +38,12 @@ describe("Auth API", () => {
   });
 
   beforeEach(async () => {
-    await AppDataSource.createQueryBuilder().delete().from(Listing).execute();
-    await AppDataSource.createQueryBuilder().delete().from(User).execute();
+    await AppDataSource.query(`DELETE FROM "message"`);
+    await AppDataSource.query(`DELETE FROM "conversation"`);
+    await AppDataSource.query(`DELETE FROM "favorite"`);
+    await AppDataSource.query(`DELETE FROM "block"`);
+    await AppDataSource.query(`DELETE FROM "listing"`);
+    await AppDataSource.query(`DELETE FROM "user"`);
   });
 
   afterAll(async () => {
@@ -27,7 +52,7 @@ describe("Auth API", () => {
     }
   });
 
-  it("POST /api/auth/register creates a user and returns token + user", async () => {
+  it("POST /api/auth/register creates a user and returns message + user", async () => {
     const res = await request(app).post("/api/auth/register").send({
       name: "Gayatri",
       umassEmail: uniqueEmail(),
@@ -35,7 +60,7 @@ describe("Auth API", () => {
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.token).toBeTruthy();
+    expect(res.body.message).toMatch(/check your email/i);
     expect(res.body.user).toBeTruthy();
     expect(res.body.user.id).toBeTruthy();
     expect(res.body.user.name).toBe("Gayatri");
@@ -64,7 +89,7 @@ describe("Auth API", () => {
     });
 
     expect(first.status).toBe(201);
-    expect(first.body.token).toBeTruthy();
+    expect(first.body.message).toMatch(/check your email/i);
 
     const second = await request(app).post("/api/auth/register").send({
       name: "Second User",
@@ -98,21 +123,12 @@ describe("Auth API", () => {
     expect(res.body.message).toMatch(/at least 8 characters/i);
   });
 
-  it("POST /api/auth/login returns token + user for valid credentials", async () => {
-    const email = uniqueEmail();
-    const password = "Test1234!";
-
-    const registerRes = await request(app).post("/api/auth/register").send({
-      name: "Login User",
-      umassEmail: email,
-      password,
-    });
-
-    expect(registerRes.status).toBe(201);
+  it("POST /api/auth/login returns token + user for verified user", async () => {
+    const { email } = await registerAndVerify(uniqueEmail(), "Login User");
 
     const loginRes = await request(app).post("/api/auth/login").send({
       umassEmail: email,
-      password,
+      password: "Test1234!",
     });
 
     expect(loginRes.status).toBe(200);
@@ -123,16 +139,25 @@ describe("Auth API", () => {
     expect(loginRes.body.user.role).toBe("user");
   });
 
-  it("POST /api/auth/login rejects wrong password", async () => {
+  it("POST /api/auth/login rejects unverified user", async () => {
     const email = uniqueEmail();
-
-    const registerRes = await request(app).post("/api/auth/register").send({
-      name: "Wrong Password User",
+    await request(app).post("/api/auth/register").send({
+      name: "Unverified User",
       umassEmail: email,
       password: "Test1234!",
     });
 
-    expect(registerRes.status).toBe(201);
+    const loginRes = await request(app).post("/api/auth/login").send({
+      umassEmail: email,
+      password: "Test1234!",
+    });
+
+    expect(loginRes.status).toBe(403);
+    expect(loginRes.body.message).toMatch(/verify your email/i);
+  });
+
+  it("POST /api/auth/login rejects wrong password", async () => {
+    const { email } = await registerAndVerify();
 
     const loginRes = await request(app).post("/api/auth/login").send({
       umassEmail: email,
@@ -165,17 +190,11 @@ describe("Auth API", () => {
 
   it("POST /api/auth/login accepts email with different casing/spaces", async () => {
     const email = uniqueEmail().toLowerCase();
-    const password = "Test1234!";
-
-    await request(app).post("/api/auth/register").send({
-      name: "Case User",
-      umassEmail: email,
-      password,
-    });
+    await registerAndVerify(email, "Case User");
 
     const res = await request(app).post("/api/auth/login").send({
       umassEmail: `  ${email.toUpperCase()}  `,
-      password,
+      password: "Test1234!",
     });
 
     expect(res.status).toBe(200);
@@ -183,16 +202,14 @@ describe("Auth API", () => {
   });
 
   it("GET /api/auth/me returns current user with valid token", async () => {
-    const email = uniqueEmail();
-    const password = "Test1234!";
+    const { email } = await registerAndVerify(uniqueEmail(), "Me User");
 
-    const registerRes = await request(app).post("/api/auth/register").send({
-      name: "Me User",
+    const loginRes = await request(app).post("/api/auth/login").send({
       umassEmail: email,
-      password,
+      password: "Test1234!",
     });
 
-    const token = registerRes.body.token;
+    const token = loginRes.body.token;
 
     const res = await request(app)
       .get("/api/auth/me")
