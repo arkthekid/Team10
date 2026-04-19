@@ -4,6 +4,9 @@ import cors from "cors";
 import listingRoutes from "./routes/listingRoutes";
 import authRoutes from "./routes/authRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
+import conversationRoutes from "./routes/conversationRoutes";
+import messageRoutes from "./routes/messageRoutes";
+
 import { errorHandler } from "./middleware/errorHandler";
 
 export function createApp() {
@@ -23,6 +26,8 @@ export function createApp() {
   app.use("/api/auth", authRoutes);
   app.use("/api/listings", listingRoutes);
   app.use("/api/upload", uploadRoutes);
+  app.use("/api/conversations", conversationRoutes);
+  app.use("/api/messages", messageRoutes);
 
   app.use(errorHandler);
 
