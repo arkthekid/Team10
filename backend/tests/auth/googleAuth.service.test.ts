@@ -97,7 +97,7 @@ describe("googleAuthService", () => {
       });
 
       await expect(
-        googleAuthService.googleLogin("fake-google-token")
+        googleAuthService.googleLogin("fake-google-token"),
       ).rejects.toThrow("Must use a @umass.edu Google account");
     });
 
@@ -108,7 +108,7 @@ describe("googleAuthService", () => {
       });
 
       await expect(
-        googleAuthService.googleLogin("fake-google-token")
+        googleAuthService.googleLogin("fake-google-token"),
       ).rejects.toThrow("Invalid Google token");
     });
 
@@ -117,7 +117,7 @@ describe("googleAuthService", () => {
       delete process.env.GOOGLE_CLIENT_ID;
 
       await expect(
-        googleAuthService.googleLogin("fake-google-token")
+        googleAuthService.googleLogin("fake-google-token"),
       ).rejects.toThrow("Google Client ID not configured");
     });
 
@@ -131,7 +131,7 @@ describe("googleAuthService", () => {
       });
 
       await expect(
-        googleAuthService.googleLogin("fake-google-token")
+        googleAuthService.googleLogin("fake-google-token"),
       ).rejects.toThrow("Google account missing email or name");
     });
 
@@ -139,9 +139,59 @@ describe("googleAuthService", () => {
     it("throws when Google token verification fails", async () => {
       mockVerifyIdToken.mockRejectedValue(new Error("Token expired"));
 
+      await expect(googleAuthService.googleLogin("bad-token")).rejects.toThrow(
+        "Token expired",
+      );
+    });
+
+    // Edge case - only name missing
+    it("throws 400 when Google payload has email but no name", async () => {
+      mockVerifyIdToken.mockResolvedValue({
+        getPayload: () => ({
+          email: "arkar@umass.edu",
+          name: null,
+        }),
+      });
+
       await expect(
-        googleAuthService.googleLogin("bad-token")
-      ).rejects.toThrow("Token expired");
+        googleAuthService.googleLogin("fake-google-token"),
+      ).rejects.toThrow("Google account missing email or name");
+    });
+
+    // Edge case - cs.umass.edu domain rejected
+    it("throws 403 for cs.umass.edu email", async () => {
+      mockVerifyIdToken.mockResolvedValue({
+        getPayload: () => ({
+          email: "arkar@cs.umass.edu",
+          name: "Arkar",
+        }),
+      });
+
+      await expect(
+        googleAuthService.googleLogin("fake-google-token"),
+      ).rejects.toThrow("Must use a @umass.edu Google account");
+    });
+
+    // Edge case - save fails for new user
+    it("throws if saving new user fails", async () => {
+      mockVerifyIdToken.mockResolvedValue({
+        getPayload: () => ({
+          email: "arkar@umass.edu",
+          name: "Arkar",
+        }),
+      });
+
+      mockRepo.findOne.mockResolvedValue(null);
+      mockRepo.create.mockImplementation((data) => ({
+        id: "some-uuid",
+        role: "user",
+        ...data,
+      }));
+      mockRepo.save.mockRejectedValue(new Error("Save failed"));
+
+      await expect(
+        googleAuthService.googleLogin("fake-google-token"),
+      ).rejects.toThrow("Save failed");
     });
   });
 });
