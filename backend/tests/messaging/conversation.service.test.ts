@@ -51,7 +51,10 @@ describe("conversationService", () => {
         sellerId: "seller-1",
       });
 
-      const result = await conversationService.startConversation("listing-1", "buyer-1");
+      const result = await conversationService.startConversation(
+        "listing-1",
+        "buyer-1",
+      );
 
       expect(result.listingId).toBe("listing-1");
       expect(result.buyerId).toBe("buyer-1");
@@ -73,7 +76,10 @@ describe("conversationService", () => {
       };
       mockConversationRepo.findOne.mockResolvedValue(existing);
 
-      const result = await conversationService.startConversation("listing-1", "buyer-1");
+      const result = await conversationService.startConversation(
+        "listing-1",
+        "buyer-1",
+      );
 
       expect(result).toEqual(existing);
       expect(mockConversationRepo.save).not.toHaveBeenCalled();
@@ -84,7 +90,7 @@ describe("conversationService", () => {
       mockListingRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        conversationService.startConversation("bad-listing", "buyer-1")
+        conversationService.startConversation("bad-listing", "buyer-1"),
       ).rejects.toThrow("Listing not found");
     });
 
@@ -96,7 +102,7 @@ describe("conversationService", () => {
       });
 
       await expect(
-        conversationService.startConversation("listing-1", "same-user")
+        conversationService.startConversation("listing-1", "same-user"),
       ).rejects.toThrow("You cannot message yourself");
     });
   });
@@ -130,7 +136,7 @@ describe("conversationService", () => {
       mockConversationRepo.find.mockRejectedValue(new Error("DB error"));
 
       await expect(
-        conversationService.getMyConversations("user-1")
+        conversationService.getMyConversations("user-1"),
       ).rejects.toThrow("DB error");
     });
   });
@@ -145,7 +151,10 @@ describe("conversationService", () => {
       };
       mockConversationRepo.findOne.mockResolvedValue(mockConversation);
 
-      const result = await conversationService.getConversationById("conv-1", "buyer-1");
+      const result = await conversationService.getConversationById(
+        "conv-1",
+        "buyer-1",
+      );
 
       expect(result).toEqual(mockConversation);
     });
@@ -155,7 +164,7 @@ describe("conversationService", () => {
       mockConversationRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        conversationService.getConversationById("bad-conv", "buyer-1")
+        conversationService.getConversationById("bad-conv", "buyer-1"),
       ).rejects.toThrow("Conversation not found");
     });
 
@@ -168,7 +177,7 @@ describe("conversationService", () => {
       });
 
       await expect(
-        conversationService.getConversationById("conv-1", "stranger")
+        conversationService.getConversationById("conv-1", "stranger"),
       ).rejects.toThrow("Unauthorized");
     });
 
@@ -181,7 +190,10 @@ describe("conversationService", () => {
       };
       mockConversationRepo.findOne.mockResolvedValue(mockConversation);
 
-      const result = await conversationService.getConversationById("conv-1", "seller-1");
+      const result = await conversationService.getConversationById(
+        "conv-1",
+        "seller-1",
+      );
 
       expect(result).toEqual(mockConversation);
     });
@@ -200,7 +212,9 @@ describe("conversationService", () => {
 
       await conversationService.deleteConversation("conv-1", "buyer-1");
 
-      expect(mockConversationRepo.remove).toHaveBeenCalledWith(mockConversation);
+      expect(mockConversationRepo.remove).toHaveBeenCalledWith(
+        mockConversation,
+      );
     });
 
     // Error case - not found
@@ -208,7 +222,7 @@ describe("conversationService", () => {
       mockConversationRepo.findOne.mockResolvedValue(null);
 
       await expect(
-        conversationService.deleteConversation("bad-conv", "buyer-1")
+        conversationService.deleteConversation("bad-conv", "buyer-1"),
       ).rejects.toThrow("Conversation not found");
     });
 
@@ -221,7 +235,7 @@ describe("conversationService", () => {
       });
 
       await expect(
-        conversationService.deleteConversation("conv-1", "stranger")
+        conversationService.deleteConversation("conv-1", "stranger"),
       ).rejects.toThrow("Unauthorized");
     });
 
@@ -235,8 +249,80 @@ describe("conversationService", () => {
       mockConversationRepo.remove.mockRejectedValue(new Error("Remove failed"));
 
       await expect(
-        conversationService.deleteConversation("conv-1", "buyer-1")
+        conversationService.deleteConversation("conv-1", "buyer-1"),
       ).rejects.toThrow("Remove failed");
+    });
+
+    // Inside startConversation describe
+    it("saves correct sellerId from listing not from request", async () => {
+      mockListingRepo.findOne.mockResolvedValue({
+        listingId: "listing-1",
+        sellerId: "real-seller",
+      });
+      mockConversationRepo.findOne.mockResolvedValue(null);
+      mockConversationRepo.create.mockReturnValue({
+        listingId: "listing-1",
+        buyerId: "buyer-1",
+        sellerId: "real-seller",
+      });
+      mockConversationRepo.save.mockResolvedValue({
+        id: "conv-1",
+        listingId: "listing-1",
+        buyerId: "buyer-1",
+        sellerId: "real-seller",
+      });
+
+      const result = await conversationService.startConversation(
+        "listing-1",
+        "buyer-1",
+      );
+
+      expect(result.sellerId).toBe("real-seller");
+    });
+
+    // Inside getConversationsForListing describe - add this describe block
+    describe("getConversationsForListing", () => {
+      it("returns conversations for a listing", async () => {
+        const mockConversations = [
+          {
+            id: "conv-1",
+            listingId: "listing-1",
+            buyerId: "buyer-1",
+            sellerId: "seller-1",
+          },
+        ];
+        mockConversationRepo.find.mockResolvedValue(mockConversations);
+
+        const result = await conversationService.getConversationsForListing(
+          "listing-1",
+          "seller-1",
+        );
+
+        expect(result).toEqual(mockConversations);
+        expect(mockConversationRepo.find).toHaveBeenCalled();
+      });
+
+      it("returns empty array if no conversations for listing", async () => {
+        mockConversationRepo.find.mockResolvedValue([]);
+
+        const result = await conversationService.getConversationsForListing(
+          "listing-1",
+          "seller-1",
+        );
+
+        expect(result).toEqual([]);
+      });
+
+      it("throws if repository fails", async () => {
+        mockConversationRepo.find.mockRejectedValue(new Error("DB error"));
+
+        await expect(
+          conversationService.getConversationsForListing(
+            "listing-1",
+            "seller-1",
+          ),
+        ).rejects.toThrow("DB error");
+      });
     });
   });
 });
