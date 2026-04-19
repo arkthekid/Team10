@@ -4,8 +4,6 @@ import authRoutes from "../../src/routes/authRoutes";
 import * as authController from "../../src/controllers/authController";
 
 jest.mock("../../src/controllers/authController");
-
-// mock protect middleware so route test only checks route wiring
 jest.mock("../../src/middleware/auth", () => ({
   protect: (req: any, res: any, next: any) => next(),
 }));
@@ -61,5 +59,40 @@ describe("authRoutes", () => {
 
     expect(res.status).toBe(200);
     expect(authController.getMe).toHaveBeenCalled();
+  });
+
+  it("POST /api/auth/google calls googleAuth controller", async () => {
+    (authController.googleAuth as jest.Mock).mockImplementation((req, res) => {
+      res.status(200).json({ token: "fake-jwt" });
+    });
+
+    const res = await request(app)
+      .post("/api/auth/google")
+      .send({ idToken: "fake-token" });
+
+    expect(res.status).toBe(200);
+    expect(authController.googleAuth).toHaveBeenCalled();
+  });
+
+  it("GET /api/auth/verify-email calls verifyEmailController", async () => {
+    (authController.verifyEmailController as jest.Mock).mockImplementation((req, res) => {
+      res.status(200).json({ token: "fake-jwt" });
+    });
+
+    const res = await request(app).get("/api/auth/verify-email?token=fake-token");
+
+    expect(res.status).toBe(200);
+    expect(authController.verifyEmailController).toHaveBeenCalled();
+  });
+
+  it("GET /api/auth/logout calls logout controller", async () => {
+    (authController.logout as jest.Mock).mockImplementation((req, res) => {
+      res.status(200).json({ message: "logged out" });
+    });
+
+    const res = await request(app).get("/api/auth/logout");
+
+    expect(res.status).toBe(200);
+    expect(authController.logout).toHaveBeenCalled();
   });
 });

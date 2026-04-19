@@ -4,9 +4,30 @@ import { AppDataSource } from "../../src/config/data-source";
 import { User } from "../../src/entities/User";
 import { Listing } from "../../src/entities/Listing";
 
+jest.mock("../../src/services/emailService", () => ({
+  sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+}));
+
 const app = createApp();
 
-const uniqueEmail = () => `amoemyint+${Date.now()}@umass.edu`;
+const uniqueEmail = () => `amoemyint+${Date.now()}-${Math.floor(Math.random() * 10000)}@umass.edu`;
+
+async function registerAndVerify(email = uniqueEmail()) {
+  const res = await request(app).post("/api/auth/register").send({
+    name: "Arkar",
+    umassEmail: email,
+    password: "Test1234!",
+  });
+
+  expect(res.status).toBe(201);
+
+  await AppDataSource.query(
+    `UPDATE "user" SET "isVerified" = true WHERE "umassEmail" = $1`,
+    [email]
+  );
+
+  return { email };
+}
 
 describe("Auth", () => {
   beforeAll(async () => {
@@ -16,8 +37,12 @@ describe("Auth", () => {
   });
 
   beforeEach(async () => {
-    await AppDataSource.createQueryBuilder().delete().from(Listing).execute();
-    await AppDataSource.createQueryBuilder().delete().from(User).execute();
+    await AppDataSource.query(`DELETE FROM "message"`);
+    await AppDataSource.query(`DELETE FROM "conversation"`);
+    await AppDataSource.query(`DELETE FROM "favorite"`);
+    await AppDataSource.query(`DELETE FROM "block"`);
+    await AppDataSource.query(`DELETE FROM "listing"`);
+    await AppDataSource.query(`DELETE FROM "user"`);
   });
 
   afterAll(async () => {
@@ -26,7 +51,7 @@ describe("Auth", () => {
     }
   });
 
-  it("POST /api/auth/register returns token + user", async () => {
+  it("POST /api/auth/register returns message + user", async () => {
     const email = uniqueEmail();
 
     const res = await request(app).post("/api/auth/register").send({
@@ -36,7 +61,7 @@ describe("Auth", () => {
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.token).toBeTruthy();
+    expect(res.body.message).toMatch(/check your email/i);
     expect(res.body.user).toBeTruthy();
     expect(res.body.user.umassEmail).toBe(email);
   });
@@ -93,14 +118,8 @@ describe("Auth", () => {
     expect(res.body.message).toBeTruthy();
   });
 
-  it("POST /api/auth/login returns token", async () => {
-    const email = uniqueEmail();
-
-    await request(app).post("/api/auth/register").send({
-      name: "Arkar",
-      umassEmail: email,
-      password: "Test1234!",
-    });
+  it("POST /api/auth/login returns token for verified user", async () => {
+    const { email } = await registerAndVerify();
 
     const res = await request(app).post("/api/auth/login").send({
       umassEmail: email,
@@ -112,14 +131,25 @@ describe("Auth", () => {
     expect(res.body.user.umassEmail).toBe(email);
   });
 
-  it("POST /api/auth/login wrong password fails", async () => {
+  it("POST /api/auth/login rejects unverified user", async () => {
     const email = uniqueEmail();
-
     await request(app).post("/api/auth/register").send({
       name: "Arkar",
       umassEmail: email,
       password: "Test1234!",
     });
+
+    const res = await request(app).post("/api/auth/login").send({
+      umassEmail: email,
+      password: "Test1234!",
+    });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/verify your email/i);
+  });
+
+  it("POST /api/auth/login wrong password fails", async () => {
+    const { email } = await registerAndVerify();
 
     const res = await request(app).post("/api/auth/login").send({
       umassEmail: email,
@@ -151,16 +181,14 @@ describe("Auth", () => {
   });
 
   it("GET /api/auth/me returns current user", async () => {
-    const email = uniqueEmail();
-    const password = "Test1234!";
+    const { email } = await registerAndVerify();
 
-    const registerRes = await request(app).post("/api/auth/register").send({
-      name: "Me User",
+    const loginRes = await request(app).post("/api/auth/login").send({
       umassEmail: email,
-      password,
+      password: "Test1234!",
     });
 
-    const token = registerRes.body.token;
+    const token = loginRes.body.token;
 
     const res = await request(app)
       .get("/api/auth/me")
