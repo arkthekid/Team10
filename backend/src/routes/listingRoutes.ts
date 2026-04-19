@@ -23,4 +23,9 @@ router.delete("/:id", protect, listingController.deleteListing);
 // router.patch("/:id/mark-sold", protect, listingController.markAsSold);
 // router.patch("/:id/mark-received", protect, listingController.markAsReceived);
 
+import * as conversationController from "../controllers/conversationController";
+
+router.post("/:listingId/conversations", protect, conversationController.startConversation);
+router.get("/:listingId/conversations", protect, conversationController.getConversationsForListing);
+
 export default router;
