@@ -48,29 +48,17 @@ const ListingDetail = () => {
   }, []);
 
   const handleDelete = async () => {
-    const deleteId =
-      listing?.listingId || listing?.id || listing?.productId || listing?._id || id;
-
-    if (!deleteId) {
-      toast.error("Missing listing id");
-      return;
-    }
+    if (!id) return;
 
     const confirmed = window.confirm("Are you sure you want to delete this listing?");
     if (!confirmed) return;
 
     try {
       setDeleting(true);
-      console.log("Deleting listing with id:", deleteId);
-      console.log("Listing detail object:", listing);
-
-      const result = await deleteListing(deleteId);
-      console.log("Delete result:", result);
-
+      await deleteListing(id);
       toast.success("Listing deleted successfully");
       navigate("/browse");
     } catch (err: any) {
-      console.error("Delete failed:", err);
       toast.error(err.message || "Failed to delete listing");
     } finally {
       setDeleting(false);
@@ -113,17 +101,8 @@ const ListingDetail = () => {
 
   const location = listing.pickUpLocation || listing.location || "Amherst, MA";
   const description = listing.description || "No description provided.";
-  const category =
-    typeof listing.category === "string"
-      ? listing.category
-      : listing.category?.name || listing.categoryId?.name || "General";
-
-  const sellerName =
-    listing.sellerName ||
-    listing.seller?.name ||
-    listing.sellerId?.name ||
-    listing.nameOfSeller ||
-    "Seller";
+  const category = listing.category || "General";
+  const sellerName = listing.sellerName || listing.nameOfSeller || "Seller";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -177,7 +156,7 @@ const ListingDetail = () => {
 
                 <button
                   type="button"
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600 disabled:opacity-60"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600"
                   onClick={handleDelete}
                   disabled={deleting}
                 >

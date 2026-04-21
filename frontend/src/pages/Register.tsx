@@ -1,12 +1,10 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import { registerUser } from "@/lib/authApi";
 
 const Register = () => {
-  const navigate = useNavigate();
-
   const [name, setName] = useState("");
   const [umassEmail, setUmassEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,10 +26,10 @@ const Register = () => {
         password,
       });
 
-      setSuccess("Registration successful. Please log in with Google.");
-      setTimeout(() => {
-        navigate("/login");
-      }, 1200);
+      setSuccess("Check your email to verify your account before logging in.");
+      setName("");
+      setUmassEmail("");
+      setPassword("");
     } catch (err: any) {
       setError(err.message || "Registration failed");
     } finally {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
-import { verifyEmail } from "../lib/authApi";
+import { verifyEmail } from "@/lib/authApi";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -13,7 +13,7 @@ const VerifyEmail = () => {
     const token = searchParams.get("token");
 
     if (!token) {
-      setError("Verification token is missing.");
+      setError("Invalid or expired link.");
       return;
     }
 
@@ -22,10 +22,10 @@ const VerifyEmail = () => {
         await verifyEmail(token);
         setMessage("Email verified successfully. Redirecting...");
         setTimeout(() => {
-          navigate("/browse");
+          navigate("/login");
         }, 1500);
       } catch (err: any) {
-        setError(err.message || "Email verification failed.");
+        setError(err.message || "Invalid or expired link.");
       }
     };
 
