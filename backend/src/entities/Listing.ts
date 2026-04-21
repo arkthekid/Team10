@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from "typeorm";
 import { Category } from "../constants/categories";
 import { User } from "./User";
@@ -68,6 +69,6 @@ export class Listing {
   @JoinColumn({ name: "buyerId" })
   buyer?: User;
 
-  @ManyToOne(() => Conversation, (conversation) => conversation.listing)
-  conversation?: Conversation;
+  @OneToMany(() => Conversation, (conversation) => conversation.listing)
+  conversations?: Conversation[];
 }
