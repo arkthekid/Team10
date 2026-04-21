@@ -1,54 +1,34 @@
 import { apiFetch } from "./api";
 
-
 export async function getListings() {
- return apiFetch("/listings");
+  return apiFetch("/listings");
 }
-
 
 export async function getListingById(id: string) {
- return apiFetch(`/listings/${id}`);
+  return apiFetch(`/listings/${id}`);
 }
-
 
 export async function getMyListings() {
- return apiFetch("/listings/me");
+  return apiFetch("/listings/me");
 }
-
 
 export async function createListing(listingData: {
- title: string;
- description: string;
- price: number;
- image?: string;
- location?: string;
+  name: string;
+  description: string;
+  price: number;
+  pickUpLocation: string;
+  condition: string;
+  category: string;
+  imageUrl?: string;
 }) {
- return apiFetch("/listings", {
-   method: "POST",
-   body: JSON.stringify(listingData),
- });
+  return apiFetch("/listings", {
+    method: "POST",
+    body: JSON.stringify(listingData),
+  });
 }
-
-
-export async function updateListing(
- id: string,
- listingData: {
-   title?: string;
-   description?: string;
-   price?: number;
-   image?: string;
-   location?: string;
- }
-) {
- return apiFetch(`/listings/${id}`, {
-   method: "PATCH",
-   body: JSON.stringify(listingData),
- });
-}
-
 
 export async function deleteListing(id: string) {
- return apiFetch(`/listings/${id}`, {
-   method: "DELETE",
- });
+  return apiFetch(`/listings/${id}`, {
+    method: "DELETE",
+  });
 }

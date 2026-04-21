@@ -28,6 +28,7 @@ const Login = () => {
             await googleLogin(response.credential);
             navigate("/browse");
           } catch (err: any) {
+            console.error("Google login failed:", err);
             setError(err.message || "Google login failed");
           }
         },
@@ -76,10 +77,6 @@ const Login = () => {
           {error && (
             <p className="text-sm text-red-500 text-center mt-4">{error}</p>
           )}
-
-          <div className="text-center text-sm text-muted-foreground mt-6">
-            <p>Use Google sign-in after registration.</p>
-          </div>
         </div>
       </main>
     </div>

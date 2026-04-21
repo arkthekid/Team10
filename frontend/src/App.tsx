@@ -7,6 +7,7 @@ import ListingDetail from "./pages/ListingDetail";
 import CreateListing from "./pages/CreateListing";
 import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
+import VerifyEmail from "./pages/VerifyEmail";
 
 const App = () => {
   return (
@@ -20,6 +21,7 @@ const App = () => {
         <Route path="/create" element={<CreateListing />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
       </Routes>
     </BrowserRouter>
   );
