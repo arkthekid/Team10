@@ -36,6 +36,9 @@ const MarketplaceHeader = () => {
             <Link to="/create" className="hover:text-primary-foreground/80 transition-colors">
               Sell
             </Link>
+            <Link to="/favorites" className="hover:text-primary-foreground/80 transition-colors">
+              Favorites
+            </Link>
             <Link to="/messages" className="hover:text-primary-foreground/80 transition-colors">
               Messages
             </Link>
