@@ -10,5 +10,7 @@ router.get("/:conversationId", protect, conversationController.getConversationBy
 router.delete("/:conversationId", protect, conversationController.deleteConversation);
 router.get("/:conversationId/messages", protect, messageController.getMessages);
 router.post("/:conversationId/messages", protect, messageController.sendMessage);
+router.patch("/:conversationId/mark-sold", protect, conversationController.markAsSold);
+router.patch("/:conversationId/mark-completed", protect, conversationController.markAsCompleted);
 
 export default router;

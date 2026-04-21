@@ -15,7 +15,7 @@ import { Message } from "./Message";
 @Entity()
 export class Conversation {
   @PrimaryGeneratedColumn("uuid")
-  id!: string;
+  conversationId!: string;
 
   @Column("text")
   listingId!: string;
