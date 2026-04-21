@@ -94,9 +94,7 @@ const ListingDetail = () => {
   const handleDelete = async () => {
     if (!id) return;
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this listing?"
-    );
+    const confirmed = window.confirm("Are you sure you want to delete this listing?");
     if (!confirmed) return;
 
     try {
@@ -113,6 +111,9 @@ const ListingDetail = () => {
   };
 
   const handleBlockSeller = async () => {
+    console.log("listing object:", listing);
+    console.log("sellerId:", listing?.sellerId);
+
     if (!listing?.sellerId) {
       toast.error("Seller information not found");
       return;
@@ -129,6 +130,7 @@ const ListingDetail = () => {
       toast.success("Seller blocked successfully");
       navigate("/browse");
     } catch (err: any) {
+      console.error("block seller error:", err);
       toast.error(err.message || "Failed to block seller");
     } finally {
       setBlocking(false);
@@ -217,9 +219,7 @@ const ListingDetail = () => {
               onClick={handleFavoriteToggle}
               disabled={favoriteLoading}
               className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
-              aria-label={
-                isFavorited ? "Remove from favorites" : "Add to favorites"
-              }
+              aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
               title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
               <Heart

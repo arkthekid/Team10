@@ -1,6 +1,7 @@
 import { apiFetch } from "./api";
 
 export async function blockUser(userId: string) {
+  console.log("blockUser called with:", userId);
   return apiFetch(`/blocks/${userId}`, {
     method: "POST",
   });
