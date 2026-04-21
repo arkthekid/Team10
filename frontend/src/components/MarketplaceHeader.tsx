@@ -30,21 +30,42 @@ const MarketplaceHeader = () => {
 
         {showNav && (
           <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link to="/browse" className="hover:text-primary-foreground/80 transition-colors">
+            <Link
+              to="/browse"
+              className="hover:text-primary-foreground/80 transition-colors"
+            >
               Browse
             </Link>
-            <Link to="/create" className="hover:text-primary-foreground/80 transition-colors">
+            <Link
+              to="/create"
+              className="hover:text-primary-foreground/80 transition-colors"
+            >
               Sell
             </Link>
-            <Link to="/favorites" className="hover:text-primary-foreground/80 transition-colors">
+            <Link
+              to="/favorites"
+              className="hover:text-primary-foreground/80 transition-colors"
+            >
               Favorites
             </Link>
-            <Link to="/messages" className="hover:text-primary-foreground/80 transition-colors">
+            <Link
+              to="/blocked-users"
+              className="hover:text-primary-foreground/80 transition-colors"
+            >
+              Blocked Sellers
+            </Link>
+            <Link
+              to="/messages"
+              className="hover:text-primary-foreground/80 transition-colors"
+            >
               Messages
             </Link>
 
             {!isLoggedIn ? (
-              <Link to="/login" className="hover:text-primary-foreground/80 transition-colors">
+              <Link
+                to="/login"
+                className="hover:text-primary-foreground/80 transition-colors"
+              >
                 Login
               </Link>
             ) : (

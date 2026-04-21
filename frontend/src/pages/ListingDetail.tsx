@@ -12,6 +12,7 @@ import MarketplaceHeader from "@/components/MarketplaceHeader";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getListingById, deleteListing } from "../lib/listingApi";
+import { blockUser } from "../lib/blockApi";
 import {
   addFavorite,
   getMyFavorites,
@@ -25,6 +26,7 @@ const ListingDetail = () => {
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [blocking, setBlocking] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +94,9 @@ const ListingDetail = () => {
   const handleDelete = async () => {
     if (!id) return;
 
-    const confirmed = window.confirm("Are you sure you want to delete this listing?");
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this listing?"
+    );
     if (!confirmed) return;
 
     try {
@@ -104,6 +108,30 @@ const ListingDetail = () => {
       toast.error(err.message || "Failed to delete listing");
     } finally {
       setDeleting(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const handleBlockSeller = async () => {
+    if (!listing?.sellerId) {
+      toast.error("Seller information not found");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to block this seller?"
+    );
+    if (!confirmed) return;
+
+    try {
+      setBlocking(true);
+      await blockUser(listing.sellerId);
+      toast.success("Seller blocked successfully");
+      navigate("/browse");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to block seller");
+    } finally {
+      setBlocking(false);
       setMenuOpen(false);
     }
   };
@@ -189,7 +217,9 @@ const ListingDetail = () => {
               onClick={handleFavoriteToggle}
               disabled={favoriteLoading}
               className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
-              aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              aria-label={
+                isFavorited ? "Remove from favorites" : "Add to favorites"
+              }
               title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
               <Heart
@@ -224,14 +254,12 @@ const ListingDetail = () => {
 
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      toast.info("Block seller feature coming soon");
-                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left disabled:opacity-60"
+                    onClick={handleBlockSeller}
+                    disabled={blocking}
                   >
                     <ShieldX className="w-5 h-5" />
-                    <span>Block Seller</span>
+                    <span>{blocking ? "Blocking..." : "Block Seller"}</span>
                   </button>
 
                   <button
