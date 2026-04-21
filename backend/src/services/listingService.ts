@@ -77,14 +77,14 @@ export async function updateListing(
   const repo = AppDataSource.getRepository(Listing);
 
   const listing = await repo.findOne({
-    where: { listingId: id },
-    relations: ["seller"],
+    where: { listingId: id }
   });
 
   if (!listing) throw new AppError("Listing not found", 404);
   if (listing.sellerId !== userId) throw new AppError("Unauthorized", 403);
 
-  delete data.listingId;
+  // prevent updating protected fields
+  delete (data as any).listingId;
   delete (data as any).seller;
   delete (data as any).sellerId;
 
