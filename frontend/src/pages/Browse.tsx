@@ -13,30 +13,47 @@ import { Button } from "@/components/ui/button";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import ListingCard from "@/components/ListingCard";
 import { getListings } from "@/lib/listingApi";
+import { getBlockedUsers } from "@/lib/blockApi";
 
 const Browse = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [priceFilter, setPriceFilter] = useState("all");
   const [listings, setListings] = useState<any[]>([]);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadListings() {
+    async function loadPageData() {
       try {
         setLoading(true);
         setError("");
 
-        const data = await getListings();
+        const [listingsData, blockedData] = await Promise.all([
+          getListings(),
+          getBlockedUsers().catch(() => []),
+        ]);
 
-        const normalizedListings = Array.isArray(data)
-          ? data
-          : Array.isArray(data.listings)
-          ? data.listings
+        const normalizedListings = Array.isArray(listingsData)
+          ? listingsData
+          : Array.isArray(listingsData.listings)
+          ? listingsData.listings
           : [];
 
+        const normalizedBlocked = Array.isArray(blockedData)
+          ? blockedData
+          : Array.isArray((blockedData as any).blocks)
+          ? (blockedData as any).blocks
+          : [];
+
+        const blockedIds = normalizedBlocked
+          .map((item: any) => item?.user?.id || item?.blockedId)
+          .filter(Boolean)
+          .map((id: any) => String(id));
+
         setListings(normalizedListings);
+        setBlockedUserIds(blockedIds);
       } catch (err: any) {
         setError(err.message || "Failed to load listings");
       } finally {
@@ -44,11 +61,25 @@ const Browse = () => {
       }
     }
 
-    loadListings();
+    loadPageData();
   }, []);
 
+  const visibleListings = useMemo(() => {
+    return listings.filter((listing) => {
+      const sellerId = String(
+        listing.sellerId ||
+          listing.seller?.id ||
+          listing.userId ||
+          listing.ownerId ||
+          ""
+      );
+
+      return !blockedUserIds.includes(sellerId);
+    });
+  }, [listings, blockedUserIds]);
+
   const categories = useMemo(() => {
-    const names = listings
+    const names = visibleListings
       .map((l) => {
         if (typeof l.category === "string") return l.category;
         if (l.category?.name) return l.category.name;
@@ -58,9 +89,9 @@ const Browse = () => {
       .filter(Boolean);
 
     return ["All", ...Array.from(new Set(names as string[]))];
-  }, [listings]);
+  }, [visibleListings]);
 
-  const filtered = listings.filter((l) => {
+  const filtered = visibleListings.filter((l) => {
     const title = (l.title || l.name || "").toLowerCase();
     const description = (l.description || "").toLowerCase();
 
@@ -150,7 +181,12 @@ const Browse = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map((listing) => (
                 <ListingCard
-                  key={listing.id || listing.listingId || listing.productId || listing._id}
+                  key={
+                    listing.id ||
+                    listing.listingId ||
+                    listing.productId ||
+                    listing._id
+                  }
                   listing={listing}
                 />
               ))}
