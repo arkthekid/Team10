@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MoreHorizontal, ArrowLeft, Flag, ShieldX, Trash2 } from "lucide-react";
+import {
+  MoreHorizontal,
+  ArrowLeft,
+  Flag,
+  ShieldX,
+  Trash2,
+  Heart,
+} from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getListingById, deleteListing } from "../lib/listingApi";
+import {
+  addFavorite,
+  getMyFavorites,
+  removeFavorite,
+} from "../lib/favoriteApi";
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -13,6 +25,8 @@ const ListingDetail = () => {
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -34,6 +48,34 @@ const ListingDetail = () => {
     }
 
     loadListing();
+  }, [id]);
+
+  useEffect(() => {
+    async function loadFavoriteStatus() {
+      if (!id) return;
+
+      try {
+        const data = await getMyFavorites();
+
+        const favorites = Array.isArray(data)
+          ? data
+          : Array.isArray(data.favorites)
+          ? data.favorites
+          : [];
+
+        const found = favorites.some((fav: any) => {
+          const favoriteId =
+            fav.listingId || fav.id || fav.productId || fav._id;
+          return String(favoriteId) === String(id);
+        });
+
+        setIsFavorited(found);
+      } catch {
+        setIsFavorited(false);
+      }
+    }
+
+    loadFavoriteStatus();
   }, [id]);
 
   useEffect(() => {
@@ -63,6 +105,28 @@ const ListingDetail = () => {
     } finally {
       setDeleting(false);
       setMenuOpen(false);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (!id || favoriteLoading) return;
+
+    try {
+      setFavoriteLoading(true);
+
+      if (isFavorited) {
+        await removeFavorite(id);
+        setIsFavorited(false);
+        toast.success("Removed from favorites");
+      } else {
+        await addFavorite(id);
+        setIsFavorited(true);
+        toast.success("Added to favorites");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update favorite");
+    } finally {
+      setFavoriteLoading(false);
     }
   };
 
@@ -119,52 +183,69 @@ const ListingDetail = () => {
             <span>Back</span>
           </button>
 
-          <div className="relative" ref={menuRef}>
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
-              className="p-2 rounded-md hover:bg-muted"
+              onClick={handleFavoriteToggle}
+              disabled={favoriteLoading}
+              className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
+              aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
-              <MoreHorizontal className="w-6 h-6" />
+              <Heart
+                className={`w-6 h-6 transition-colors ${
+                  isFavorited ? "fill-red-500 text-red-500" : "text-foreground"
+                }`}
+              />
             </button>
 
-            {menuOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-card border rounded-xl shadow-lg p-2 z-20">
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    toast.info("Report feature coming soon");
-                  }}
-                >
-                  <Flag className="w-5 h-5" />
-                  <span>Report Listing</span>
-                </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="p-2 rounded-md hover:bg-muted"
+              >
+                <MoreHorizontal className="w-6 h-6" />
+              </button>
 
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    toast.info("Block seller feature coming soon");
-                  }}
-                >
-                  <ShieldX className="w-5 h-5" />
-                  <span>Block Seller</span>
-                </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-card border rounded-xl shadow-lg p-2 z-20">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      toast.info("Report feature coming soon");
+                    }}
+                  >
+                    <Flag className="w-5 h-5" />
+                    <span>Report Listing</span>
+                  </button>
 
-                <button
-                  type="button"
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600"
-                  onClick={handleDelete}
-                  disabled={deleting}
-                >
-                  <Trash2 className="w-5 h-5" />
-                  <span>{deleting ? "Deleting..." : "Delete Listing"}</span>
-                </button>
-              </div>
-            )}
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      toast.info("Block seller feature coming soon");
+                    }}
+                  >
+                    <ShieldX className="w-5 h-5" />
+                    <span>Block Seller</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span>{deleting ? "Deleting..." : "Delete Listing"}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
