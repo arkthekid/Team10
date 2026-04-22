@@ -6,12 +6,15 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  OneToOne,
+  JoinTable,
+  ManyToMany,
   OneToMany
 } from "typeorm";
 import { Category } from "../constants/categories";
 import { User } from "./User";
 import { Conversation } from "./Conversation";
+import { CategoryEntity } from "./Category";
+// import { pickUpLocation } from "./pickUpLocation";
 
 export type ListingStatus = "available" | "sold_pending" | "completed";
 
@@ -72,4 +75,12 @@ export class Listing {
 
   @OneToMany(() => Conversation, (conversation) => conversation.listing, { nullable: true })
   conversations!: Conversation[];
+
+  @ManyToMany(() => CategoryEntity, (category) => category.listings)
+  @JoinTable()
+  categories!: Category[];
+
+  // @ManyToOne(() => pickUpLocation, (pickUpLocation: pickUpLocation) => pickUpLocation.listings)
+  // @JoinColumn({ name: "pickUpLocation" })
+  // pickUpLocation!: pickUpLocation;
 }
