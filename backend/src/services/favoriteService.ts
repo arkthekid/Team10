@@ -17,10 +17,15 @@ export async function addFavorite(userId: string, listingId: string) {
 
   const existingFavorite = await favoriteRepo.findOne({
     where: { userId, listingId },
+    relations: ["listing"]
   });
 
   if (existingFavorite) {
     throw new AppError("Listing is already in favorites", 409);
+  }
+
+  if (userId == listing.sellerId) {
+    throw new AppError("Cannot favorite your listing", 409);
   }
 
   const favorite = favoriteRepo.create({
