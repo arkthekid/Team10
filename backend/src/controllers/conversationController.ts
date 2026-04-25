@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as conversationService from "../services/conversationService";
 import { getUserId } from "../utils/getUserId";
+import { error } from "node:console";
 
 export const startConversation = async (req: Request<{ listingId: string }>, res: Response, next: NextFunction) => {
   try {

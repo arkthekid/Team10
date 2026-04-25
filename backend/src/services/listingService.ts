@@ -3,6 +3,7 @@ import { AppDataSource } from "../config/data-source";
 import { Listing } from "../entities/Listing";
 import { User } from "../entities/User";
 import { GetListingDto } from "../dto/getListing.dto";
+import { Conversation } from "../entities/Conversation";
 
 export async function createListing(data: Partial<Listing>, userId: string) {
   const listingRepository = AppDataSource.getRepository(Listing);
@@ -62,11 +63,29 @@ export async function getListingById(id: string) {
 
   const listing = await repo.findOne({
     where: { listingId: id },
+    relations: ["seller"]
   });
 
   if (!listing) throw new AppError("Listing not found", 404);
 
-  return listing;
+  const cntConversation = await AppDataSource.getRepository(Conversation).count({
+    where: { listingId: id }
+  })
+
+  return {
+    listingId: listing.listingId,
+    name: listing.name,
+    price: listing.price,
+    condition: listing.condition,
+    categories: listing.categories,
+    status: listing.status,
+    description: listing.description,
+    ownerId: listing.sellerId,
+    sellerName: listing.seller.name,
+    updatedAt: listing.updatedAt,
+    pickUpLocation: listing.pickUpLocation,
+    cntInterestedUser: cntConversation,
+  }
 }
 
 export async function updateListing(
