@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as listingController from "../controllers/listingController";
+import * as imageController from "../controllers/uploadController";
 import { protect } from "../middleware/auth";
 
 const router = Router();
@@ -14,15 +15,14 @@ router.post("/", protect, listingController.createListing);
 router.patch("/:id", protect, listingController.updateListing);
 router.delete("/:id", protect, listingController.deleteListing);
 
-// transaction handshake routes
-/**
- * @route   PATCH /api/listings/:id/mark-sold
- * @param   {string} id - The Listing ID
- * @access  Private (Seller only)
- */
-// router.patch("/:id/mark-sold", protect, listingController.markAsSold);
-// router.patch("/:id/mark-received", protect, listingController.markAsReceived);
+// image routes
+import multer from "multer";
+const upload = multer({ storage: multer.memoryStorage() })
 
+router.post("/:listingId/images", protect, upload.array("images", 5), imageController.uploadListingImages);
+router.delete("/images/:imageId", protect, imageController.deleteListingImage);
+
+// conversation
 import * as conversationController from "../controllers/conversationController";
 
 router.post("/:listingId/conversations", protect, conversationController.startConversation);

@@ -1,11 +1,13 @@
 import "dotenv/config";
 import { DataSource } from "typeorm";
 import { Listing } from "../entities/Listing";
+import { ListingImage } from "../entities/ListingImage";
 import { User } from "../entities/User";
 import { Favorite } from "../entities/Favorite";
 import { Block } from "../entities/Block";
 import { Conversation } from "../entities/Conversation";
 import { Message } from "../entities/Message";
+import { CategoryEntity } from "../entities/Category";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -18,6 +20,6 @@ export const AppDataSource = new DataSource({
   synchronize: true,
   logging: false,
 
-  entities: [Listing, User, Favorite, Block, Conversation, Message],
+  entities: [Listing, ListingImage, User, Favorite, Block, Conversation, Message, CategoryEntity],
 
 });

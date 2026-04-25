@@ -14,6 +14,7 @@ import { Category } from "../constants/categories";
 import { User } from "./User";
 import { Conversation } from "./Conversation";
 import { CategoryEntity } from "./Category";
+import { ListingImage } from "./ListingImage";
 // import { pickUpLocation } from "./pickUpLocation";
 
 export type ListingStatus = "available" | "sold_pending" | "completed";
@@ -50,9 +51,6 @@ export class Listing {
   @Column("text")
   pickUpLocation!: string;
 
-  @Column("text", { nullable: true })
-  imageUrl!: string | null;
-
   @CreateDateColumn()
   createdAt!: Date;
 
@@ -79,6 +77,9 @@ export class Listing {
   @ManyToMany(() => CategoryEntity, (category) => category.listings)
   @JoinTable()
   categories!: Category[];
+
+  @OneToMany(() => ListingImage, (images) => images.listing, { cascade: true, eager: true })
+  images!: ListingImage[];
 
   // @ManyToOne(() => pickUpLocation, (pickUpLocation: pickUpLocation) => pickUpLocation.listings)
   // @JoinColumn({ name: "pickUpLocation" })
