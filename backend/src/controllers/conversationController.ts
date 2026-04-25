@@ -57,6 +57,20 @@ export const deleteConversation = async (req: Request<{ conversationId: string }
   }
 };
 
+export const markAsSold = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sellerId = getUserId(req);
+    const conversationId = req.params.conversationId as string;
+
+    const updatedListing = await conversationService.markAsSold(sellerId, conversationId);
+
+    res.status(200).json(updatedListing);
+  }
+  catch (error) {
+    next(error);
+  }
+}
+
 export const markAsCompleted = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const buyerId = getUserId(req);

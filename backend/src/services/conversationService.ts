@@ -42,7 +42,7 @@ export const getConversationsForListing = async (listingId: string, userId: stri
 
 export const getConversationById = async (conversationId: string, userId: string) => {
   const conversation = await conversationRepo().findOne({
-    where: { id: conversationId },
+    where: { conversationId: conversationId },
     relations: ["buyer", "seller", "listing", "messages"],
   });
 
@@ -65,7 +65,7 @@ export const getMyConversations = async (userId: string) => {
 
 export const deleteConversation = async (conversationId: string, userId: string) => {
   const conversation = await conversationRepo().findOne({
-    where: { id: conversationId },
+    where: { conversationId: conversationId },
   });
 
   if (!conversation) throw new AppError("Conversation not found", 404);
@@ -76,6 +76,27 @@ export const deleteConversation = async (conversationId: string, userId: string)
 
   await conversationRepo().remove(conversation);
 };
+
+export async function markAsSold(userId: string, conversationId: string) {
+  const convRepo = AppDataSource.getRepository(Conversation);
+  const conversation = await convRepo.findOne({
+    where: { conversationId },
+    relations: { listing: true },
+  });
+  if (!conversation) throw new AppError("Conversation not found");
+
+  const listing = conversation.listing;
+  if (!listing) throw new AppError("Listing not found");
+  if (listing.sellerId !== userId) throw new AppError("Only seller can mark a listing as sold");
+  if (listing.status !== "available") throw new AppError("Listing is not available");
+
+  listing.buyerId = conversation.buyerId;
+  listing.status = "sold_pending";
+  listing.sellerMarkedSoldAt = new Date();
+
+  const listingRepo = AppDataSource.getRepository(Listing);
+  return listingRepo.save(listing);
+}
 
 export async function markAsReceived(conversationId: string, userId: string) {
   const repo = AppDataSource.getRepository(Conversation);

@@ -1,26 +1,35 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
-import { registerUser } from "../lib/authApi";
+import { registerUser } from "@/lib/authApi";
 
 const Register = () => {
-  const navigate = useNavigate();
-
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [umassEmail, setUmassEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSuccess("");
 
     try {
-      await registerUser({ name, umassEmail: email, password });
-      navigate("/login");
+      setLoading(true);
+
+      await registerUser({
+        name,
+        umassEmail,
+        password,
+      });
+
+      setSuccess("Check your email to verify your account before logging in.");
+      setName("");
+      setUmassEmail("");
+      setPassword("");
     } catch (err: any) {
       setError(err.message || "Registration failed");
     } finally {
@@ -31,6 +40,7 @@ const Register = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <MarketplaceHeader />
+
       <main className="flex-1 flex items-center justify-center p-6">
         <div className="bg-card rounded-lg shadow-sm border p-8 max-w-sm w-full">
           <h1 className="text-2xl font-semibold mb-2 text-center">Register</h1>
@@ -44,7 +54,7 @@ const Register = () => {
               <input
                 type="text"
                 className="w-full h-12 rounded-md border bg-background px-3 text-sm"
-                placeholder="Enter your name"
+                placeholder="Enter your full name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -56,9 +66,9 @@ const Register = () => {
               <input
                 type="email"
                 className="w-full h-12 rounded-md border bg-background px-3 text-sm"
-                placeholder="Enter your @umass.edu email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your UMass email"
+                value={umassEmail}
+                onChange={(e) => setUmassEmail(e.target.value)}
                 required
               />
             </div>
@@ -68,7 +78,7 @@ const Register = () => {
               <input
                 type="password"
                 className="w-full h-12 rounded-md border bg-background px-3 text-sm"
-                placeholder="Enter your password"
+                placeholder="Create a password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -76,6 +86,7 @@ const Register = () => {
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
+            {success && <p className="text-sm text-green-600">{success}</p>}
 
             <Button
               type="submit"
@@ -85,6 +96,15 @@ const Register = () => {
               {loading ? "Registering..." : "Register"}
             </Button>
           </form>
+
+          <div className="text-center text-sm text-muted-foreground mt-6">
+            <p>
+              Already registered?{" "}
+              <Link to="/login" className="underline">
+                Go to login
+              </Link>
+            </p>
+          </div>
         </div>
       </main>
     </div>

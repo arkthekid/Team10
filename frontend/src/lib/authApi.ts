@@ -15,16 +15,10 @@ export async function registerUser(userData: {
   });
 }
 
-export async function loginUser(credentials: {
-  umassEmail: string;
-  password: string;
-}) {
-  const data = await apiFetch("/auth/login", {
+export async function googleLogin(idToken: string) {
+  const data = await apiFetch("/auth/google", {
     method: "POST",
-    body: JSON.stringify({
-      umassEmail: credentials.umassEmail,
-      password: credentials.password,
-    }),
+    body: JSON.stringify({ idToken }),
   });
 
   if (data.token) {
@@ -34,6 +28,24 @@ export async function loginUser(credentials: {
   return data;
 }
 
-export function logoutUser() {
-  removeToken();
+export async function verifyEmail(token: string) {
+  const data = await apiFetch(`/auth/verify-email?token=${encodeURIComponent(token)}`, {
+    method: "GET",
+  });
+
+  if (data.token) {
+    setToken(data.token);
+  }
+
+  return data;
+}
+
+export async function logoutUser() {
+  try {
+    await apiFetch("/auth/logout", {
+      method: "GET",
+    });
+  } finally {
+    removeToken();
+  }
 }

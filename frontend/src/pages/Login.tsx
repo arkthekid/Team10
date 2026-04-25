@@ -1,31 +1,63 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
-import { loginUser } from "../lib/authApi";
+import { googleLogin } from "@/lib/authApi";
+
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const Login = () => {
   const navigate = useNavigate();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  useEffect(() => {
+    const initializeGoogle = () => {
+      if (!window.google || !googleButtonRef.current || !GOOGLE_CLIENT_ID) return;
 
-    try {
-      await loginUser({ umassEmail: email, password });
-      navigate("/browse");
-    } catch (err: any) {
-      setError(err.message || "Login failed");
-    } finally {
-      setLoading(false);
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async (response: any) => {
+          try {
+            setError("");
+            await googleLogin(response.credential);
+            navigate("/browse");
+          } catch (err: any) {
+            console.error("Google login failed:", err);
+            setError(err.message || "Google login failed");
+          }
+        },
+      });
+
+      googleButtonRef.current.innerHTML = "";
+
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        width: 300,
+      });
+    };
+
+    const existingScript = document.getElementById("google-oauth-script");
+
+    if (existingScript) {
+      initializeGoogle();
+      return;
     }
-  };
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.id = "google-oauth-script";
+    script.onload = initializeGoogle;
+    document.body.appendChild(script);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -35,48 +67,16 @@ const Login = () => {
         <div className="bg-card rounded-lg shadow-sm border p-8 max-w-sm w-full">
           <h1 className="text-2xl font-semibold mb-2 text-center">Login</h1>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            Sign in to access the marketplace
+            Sign in with your UMass Google account
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                className="w-full h-12 rounded-md border bg-background px-3 text-sm"
-                placeholder="Enter your UMass email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Password</label>
-              <input
-                type="password"
-                className="w-full h-12 rounded-md border bg-background px-3 text-sm"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {error && <p className="text-sm text-red-500">{error}</p>}
-
-            <Button
-              type="submit"
-              className="w-full h-12 text-base font-medium"
-              disabled={loading}
-            >
-              {loading ? "Logging in..." : "Login"}
-            </Button>
-          </form>
-
-          <div className="text-center text-sm text-muted-foreground mt-6">
-            <p>Your university email will be verified.</p>
+          <div className="flex justify-center">
+            <div ref={googleButtonRef} />
           </div>
+
+          {error && (
+            <p className="text-sm text-red-500 text-center mt-4">{error}</p>
+          )}
         </div>
       </main>
     </div>

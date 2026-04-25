@@ -9,7 +9,7 @@ export async function createListing(data: Partial<Listing>, userId: string) {
   const listingRepository = AppDataSource.getRepository(Listing);
 
   const listing = listingRepository.create(data);
-  listing.seller = { id: userId } as User;
+  listing.sellerId = userId;
 
   return await listingRepository.save(listing);
 }
@@ -96,14 +96,14 @@ export async function updateListing(
   const repo = AppDataSource.getRepository(Listing);
 
   const listing = await repo.findOne({
-    where: { listingId: id },
-    relations: ["seller"],
+    where: { listingId: id }
   });
 
   if (!listing) throw new AppError("Listing not found", 404);
-  if (listing.seller.id !== userId) throw new AppError("Unauthorized", 403);
+  if (listing.sellerId !== userId) throw new AppError("Unauthorized", 403);
 
-  delete data.listingId;
+  // prevent updating protected fields
+  delete (data as any).listingId;
   delete (data as any).seller;
   delete (data as any).sellerId;
 
@@ -120,7 +120,7 @@ export async function deleteListing(id: string, userId: string) {
   });
 
   if (!listing) throw new AppError("Listing not found", 404);
-  if (listing.seller.id !== userId) throw new AppError("Unauthorized", 403);
+  if (listing.sellerId !== userId) throw new AppError("Unauthorized", 403);
 
   await repo.remove(listing);
 
@@ -131,6 +131,6 @@ export async function getMyListings(userId: string) {
   const repo = AppDataSource.getRepository(Listing);
 
   return await repo.find({
-    where: { seller: { id: userId } },
+    where: { sellerId: userId },
   });
 }

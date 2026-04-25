@@ -6,7 +6,10 @@ import Browse from "./pages/Browse";
 import ListingDetail from "./pages/ListingDetail";
 import CreateListing from "./pages/CreateListing";
 import Messages from "./pages/Messages";
+import Favorites from "./pages/Favorites";
+import BlockedUsers from "./pages/BlockedUsers";
 import NotFound from "./pages/NotFound";
+import VerifyEmail from "./pages/VerifyEmail";
 
 const App = () => {
   return (
@@ -19,6 +22,9 @@ const App = () => {
         <Route path="/listing/:id" element={<ListingDetail />} />
         <Route path="/create" element={<CreateListing />} />
         <Route path="/messages" element={<Messages />} />
+        <Route path="/favorites" element={<Favorites />} />
+        <Route path="/blocked-users" element={<BlockedUsers />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

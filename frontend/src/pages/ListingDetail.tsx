@@ -1,107 +1,311 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Flag, ShieldX } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  MoreHorizontal,
+  ArrowLeft,
+  Flag,
+  ShieldX,
+  Trash2,
+  Heart,
+} from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
-import SafetyNotice from "@/components/SafetyNotice";
-import { listings } from "@/data/listings";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getListingById, deleteListing } from "../lib/listingApi";
+import { blockUser } from "../lib/blockApi";
+import {
+  addFavorite,
+  getMyFavorites,
+  removeFavorite,
+} from "../lib/favoriteApi";
 
 const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const listing = listings.find((l) => l.productId === id);
-  const [showSafety, setShowSafety] = useState(false);
 
-  if (!listing) {
+  const [listing, setListing] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [blocking, setBlocking] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function loadListing() {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        setError("");
+        const data = await getListingById(id);
+        setListing(data.listing || data);
+      } catch (err: any) {
+        setError(err.message || "Listing not found");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadListing();
+  }, [id]);
+
+  useEffect(() => {
+    async function loadFavoriteStatus() {
+      if (!id) return;
+
+      try {
+        const data = await getMyFavorites();
+
+        const favorites = Array.isArray(data)
+          ? data
+          : Array.isArray(data.favorites)
+          ? data.favorites
+          : [];
+
+        const found = favorites.some((fav: any) => {
+          const favoriteId =
+            fav.listingId || fav.id || fav.productId || fav._id;
+          return String(favoriteId) === String(id);
+        });
+
+        setIsFavorited(found);
+      } catch {
+        setIsFavorited(false);
+      }
+    }
+
+    loadFavoriteStatus();
+  }, [id]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    const confirmed = window.confirm("Are you sure you want to delete this listing?");
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      await deleteListing(id);
+      toast.success("Listing deleted successfully");
+      navigate("/browse");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete listing");
+    } finally {
+      setDeleting(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const handleBlockSeller = async () => {
+    console.log("listing object:", listing);
+    console.log("sellerId:", listing?.sellerId);
+
+    if (!listing?.sellerId) {
+      toast.error("Seller information not found");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to block this seller?"
+    );
+    if (!confirmed) return;
+
+    try {
+      setBlocking(true);
+      await blockUser(listing.sellerId);
+      toast.success("Seller blocked successfully");
+      navigate("/browse");
+    } catch (err: any) {
+      console.error("block seller error:", err);
+      toast.error(err.message || "Failed to block seller");
+    } finally {
+      setBlocking(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (!id || favoriteLoading) return;
+
+    try {
+      setFavoriteLoading(true);
+
+      if (isFavorited) {
+        await removeFavorite(id);
+        setIsFavorited(false);
+        toast.success("Removed from favorites");
+      } else {
+        await addFavorite(id);
+        setIsFavorited(true);
+        toast.success("Added to favorites");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update favorite");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <MarketplaceHeader />
-        <main className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Listing not found.</p>
+        <main className="flex-1 max-w-6xl mx-auto w-full p-6">
+          <p>Loading listing...</p>
         </main>
       </div>
     );
   }
 
-  const handleMessageSeller = () => {
-    setShowSafety(true);
-  };
+  if (error || !listing) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <MarketplaceHeader />
+        <main className="flex-1 max-w-6xl mx-auto w-full p-6">
+          <p className="text-red-500">{error || "Listing not found"}</p>
+        </main>
+      </div>
+    );
+  }
 
-  const handleSafetyAccepted = () => {
-    setShowSafety(false);
-    navigate("/messages");
-  };
+  const title = listing.name || listing.title || "Untitled Listing";
+  const price =
+    listing.price === null || listing.price === undefined
+      ? null
+      : Number(listing.price);
+
+  const image =
+    listing.imageUrl ||
+    listing.image ||
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
+
+  const location = listing.pickUpLocation || listing.location || "Amherst, MA";
+  const description = listing.description || "No description provided.";
+  const category = listing.category || "General";
+  const sellerName = listing.sellerName || listing.nameOfSeller || "Seller";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <MarketplaceHeader />
-      <main className="flex-1 max-w-4xl mx-auto w-full p-4 md:p-6">
-        <div className="flex items-center justify-between mb-4">
+
+      <main className="flex-1 max-w-6xl mx-auto w-full p-6">
+        <div className="flex items-center justify-between mb-6">
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="w-4 h-4" /> Back
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back</span>
           </button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
-                •••
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => toast.success("Listing reported. We'll review it shortly.")}>
-                <Flag className="w-4 h-4 mr-2" /> Report Listing
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.success(`${listing.sellerId.name} has been blocked.`)}>
-                <ShieldX className="w-4 h-4 mr-2" /> Block Seller
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleFavoriteToggle}
+              disabled={favoriteLoading}
+              className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
+              aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart
+                className={`w-6 h-6 transition-colors ${
+                  isFavorited ? "fill-red-500 text-red-500" : "text-foreground"
+                }`}
+              />
+            </button>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-card rounded-lg border overflow-hidden">
-            <img
-              src={listing.image}
-              alt={listing.title}
-              className="w-full aspect-square object-cover"
-            />
-            <div className="flex gap-1 justify-center py-2">
-              <span className="w-2 h-2 rounded-full bg-foreground" />
-              <span className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="p-2 rounded-md hover:bg-muted"
+              >
+                <MoreHorizontal className="w-6 h-6" />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-64 bg-card border rounded-xl shadow-lg p-2 z-20">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      toast.info("Report feature coming soon");
+                    }}
+                  >
+                    <Flag className="w-5 h-5" />
+                    <span>Report Listing</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left disabled:opacity-60"
+                    onClick={handleBlockSeller}
+                    disabled={blocking}
+                  >
+                    <ShieldX className="w-5 h-5" />
+                    <span>{blocking ? "Blocking..." : "Block Seller"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span>{deleting ? "Deleting..." : "Delete Listing"}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-col gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-foreground">{listing.title}</h2>
-              <p className="text-xl font-bold text-primary mt-1">
-                {listing.price === null ? "FREE" : `$${listing.price.toLocaleString()}`}
-              </p>
+        <div className="grid md:grid-cols-2 gap-8 items-start">
+          <div className="rounded-2xl overflow-hidden border bg-card">
+            <img
+              src={image}
+              alt={title}
+              className="w-full aspect-square object-cover"
+            />
+          </div>
+
+          <div>
+            <h1 className="text-4xl font-bold mb-2">{title}</h1>
+
+            <p className="text-2xl font-bold text-primary mb-6">
+              {price === null ? "FREE" : `$${price.toLocaleString()}`}
+            </p>
+
+            <p className="text-muted-foreground mb-2">{location}</p>
+            <p className="text-muted-foreground mb-2">Posted by {sellerName}</p>
+
+            <div className="inline-block px-3 py-1 rounded-md bg-muted text-sm mb-6">
+              {category}
             </div>
 
-            <div className="text-sm text-muted-foreground space-y-1">
-              <p>{listing.pickUpLocation} · {listing.postedDate}</p>
-              <p>Posted by <span className="font-medium text-foreground">{listing.sellerId.name}</span></p>
-              <p className="inline-block bg-secondary text-secondary-foreground px-2 py-0.5 rounded text-xs font-medium">
-                {listing.categoryId.name}
-              </p>
-            </div>
+            <p className="text-lg leading-8 mb-10">{description}</p>
 
-            <p className="text-sm text-foreground leading-relaxed">{listing.description}</p>
-
-            <Button className="mt-auto" size="lg" onClick={handleMessageSeller}>
-              Message Seller
-            </Button>
+            <Button className="w-full h-14 text-lg">Message Seller</Button>
           </div>
         </div>
       </main>
-
-      <SafetyNotice open={showSafety} onAccept={handleSafetyAccepted} />
     </div>
   );
 };
