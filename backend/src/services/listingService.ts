@@ -80,6 +80,7 @@ export async function getListingById(id: string) {
     categories: listing.categories,
     status: listing.status,
     description: listing.description,
+    images: listing.images,
     ownerId: listing.sellerId,
     sellerName: listing.seller.name,
     updatedAt: listing.updatedAt,
