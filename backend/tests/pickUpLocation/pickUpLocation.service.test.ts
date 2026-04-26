@@ -53,4 +53,34 @@ describe("pickUpLocationService", () => {
       ).rejects.toThrow("Save failed");
     });
   });
+
+  describe("getAllPickUpLocations", () => {
+    it("returns all pick up locations", async () => {
+      mockRepo.find.mockResolvedValue([
+        { locationId: "uuid-1", name: "Orchard Hill" },
+        { locationId: "uuid-2", name: "Student Union" },
+      ]);
+
+      const result = await pickUpLocationService.getAllPickUpLocations();
+
+      expect(result).toHaveLength(2);
+      expect(mockRepo.find).toHaveBeenCalled();
+    });
+
+    it("returns empty array when no locations exist", async () => {
+      mockRepo.find.mockResolvedValue([]);
+
+      const result = await pickUpLocationService.getAllPickUpLocations();
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("throws if database query fails", async () => {
+      mockRepo.find.mockRejectedValue(new Error("DB error"));
+
+      await expect(
+        pickUpLocationService.getAllPickUpLocations()
+      ).rejects.toThrow("DB error");
+    });
+  });
 });
