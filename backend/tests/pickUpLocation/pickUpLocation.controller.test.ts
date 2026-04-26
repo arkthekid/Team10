@@ -25,7 +25,9 @@ describe("pickUpLocationController", () => {
   describe("createPickUpLocation", () => {
     it("returns 201 and created location on success", async () => {
       mockReq.body = { name: "Orchard Hill" };
-      (pickUpLocationService.createPickUpLocation as jest.Mock).mockResolvedValue({
+      (
+        pickUpLocationService.createPickUpLocation as jest.Mock
+      ).mockResolvedValue({
         locationId: "uuid-1",
         name: "Orchard Hill",
       });
@@ -33,12 +35,15 @@ describe("pickUpLocationController", () => {
       pickUpLocationController.createPickUpLocation(
         mockReq as Request,
         mockRes as Response,
-        mockNext
+        mockNext,
       );
       await flushPromises();
 
       expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes.json).toHaveBeenCalledWith({ locationId: "uuid-1", name: "Orchard Hill" });
+      expect(mockRes.json).toHaveBeenCalledWith({
+        locationId: "uuid-1",
+        name: "Orchard Hill",
+      });
     });
 
     it("calls next with 400 AppError when name is missing", async () => {
@@ -47,7 +52,7 @@ describe("pickUpLocationController", () => {
       pickUpLocationController.createPickUpLocation(
         mockReq as Request,
         mockRes as Response,
-        mockNext
+        mockNext,
       );
       await flushPromises();
 
@@ -59,14 +64,14 @@ describe("pickUpLocationController", () => {
 
     it("calls next with error when service throws", async () => {
       mockReq.body = { name: "Orchard Hill" };
-      (pickUpLocationService.createPickUpLocation as jest.Mock).mockRejectedValue(
-        new AppError("Pick up location already exists", 409)
-      );
+      (
+        pickUpLocationService.createPickUpLocation as jest.Mock
+      ).mockRejectedValue(new AppError("Pick up location already exists", 409));
 
       pickUpLocationController.createPickUpLocation(
         mockReq as Request,
         mockRes as Response,
-        mockNext
+        mockNext,
       );
       await flushPromises();
 
@@ -76,9 +81,11 @@ describe("pickUpLocationController", () => {
     });
   });
 
-    describe("getAllPickUpLocations", () => {
+  describe("getAllPickUpLocations", () => {
     it("returns 200 and all locations on success", async () => {
-      (pickUpLocationService.getAllPickUpLocations as jest.Mock).mockResolvedValue([
+      (
+        pickUpLocationService.getAllPickUpLocations as jest.Mock
+      ).mockResolvedValue([
         { locationId: "uuid-1", name: "Orchard Hill" },
         { locationId: "uuid-2", name: "Student Union" },
       ]);
@@ -86,7 +93,7 @@ describe("pickUpLocationController", () => {
       pickUpLocationController.getAllPickUpLocations(
         mockReq as Request,
         mockRes as Response,
-        mockNext
+        mockNext,
       );
       await flushPromises();
 
@@ -98,12 +105,14 @@ describe("pickUpLocationController", () => {
     });
 
     it("returns 200 and empty array when no locations exist", async () => {
-      (pickUpLocationService.getAllPickUpLocations as jest.Mock).mockResolvedValue([]);
+      (
+        pickUpLocationService.getAllPickUpLocations as jest.Mock
+      ).mockResolvedValue([]);
 
       pickUpLocationController.getAllPickUpLocations(
         mockReq as Request,
         mockRes as Response,
-        mockNext
+        mockNext,
       );
       await flushPromises();
 
@@ -112,14 +121,73 @@ describe("pickUpLocationController", () => {
     });
 
     it("calls next with error when service throws", async () => {
-      (pickUpLocationService.getAllPickUpLocations as jest.Mock).mockRejectedValue(
-        new Error("DB error")
-      );
+      (
+        pickUpLocationService.getAllPickUpLocations as jest.Mock
+      ).mockRejectedValue(new Error("DB error"));
 
       pickUpLocationController.getAllPickUpLocations(
         mockReq as Request,
         mockRes as Response,
-        mockNext
+        mockNext,
+      );
+      await flushPromises();
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+  });
+
+  describe("getPickUpLocationById", () => {
+    it("returns 200 and location on success", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      (
+        pickUpLocationService.getPickUpLocationById as jest.Mock
+      ).mockResolvedValue({
+        locationId: "uuid-1",
+        name: "Orchard Hill",
+      });
+
+      pickUpLocationController.getPickUpLocationById(
+        mockReq as any,
+        mockRes as Response,
+        mockNext,
+      );
+      await flushPromises();
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        locationId: "uuid-1",
+        name: "Orchard Hill",
+      });
+    });
+
+    it("calls next with 404 error when location not found", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      (
+        pickUpLocationService.getPickUpLocationById as jest.Mock
+      ).mockRejectedValue(new AppError("Pick up location not found", 404));
+
+      pickUpLocationController.getPickUpLocationById(
+        mockReq as any,
+        mockRes as Response,
+        mockNext,
+      );
+      await flushPromises();
+
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0] as AppError;
+      expect(error.message).toBe("Pick up location not found");
+    });
+
+    it("calls next with error when service throws", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      (
+        pickUpLocationService.getPickUpLocationById as jest.Mock
+      ).mockRejectedValue(new Error("DB error"));
+
+      pickUpLocationController.getPickUpLocationById(
+        mockReq as any,
+        mockRes as Response,
+        mockNext,
       );
       await flushPromises();
 
