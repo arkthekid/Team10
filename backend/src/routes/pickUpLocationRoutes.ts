@@ -5,4 +5,6 @@ import { requireAdmin } from "../middleware/adminMiddleware";
 
 const router = Router();
 
+router.post("/", protect, requireAdmin, pickUpLocationController.createPickUpLocation);
+
 export default router;
