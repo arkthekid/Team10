@@ -47,3 +47,21 @@ export const getPickUpLocationById = async (
     next(error);
   }
 };
+
+export const updatePickUpLocation = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    if (!name) {
+      return next(new AppError("Name is required", 400));
+    }
+    const location = await pickUpLocationService.updatePickUpLocation(id, name);
+    res.status(200).json(location);
+  } catch (error) {
+    next(error);
+  }
+};
