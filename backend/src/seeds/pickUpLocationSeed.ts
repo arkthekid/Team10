@@ -13,6 +13,13 @@ const residentialLocations = [
   "Central Residential Area",
 ];
 
+const diningLocations = [
+  "Worcester Dining Commons",
+  "Franklin Dining Commons",
+  "Hampshire Dining Commons",
+  "Berkshire Dining Commons",
+];
+
 const seed = async () => {
   await AppDataSource.initialize();
   const repo = AppDataSource.getRepository(pickUpLocation);
