@@ -8,6 +8,7 @@ import { Block } from "../entities/Block";
 import { Conversation } from "../entities/Conversation";
 import { Message } from "../entities/Message";
 import { CategoryEntity } from "../entities/Category";
+import { pickUpLocation } from "../entities/pickUpLocation";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -20,6 +21,6 @@ export const AppDataSource = new DataSource({
   synchronize: true,
   logging: false,
 
-  entities: [Listing, ListingImage, User, Favorite, Block, Conversation, Message, CategoryEntity],
+  entities: [Listing, ListingImage, User, Favorite, Block, Conversation, Message, CategoryEntity, pickUpLocation],
 
 });
