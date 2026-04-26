@@ -83,4 +83,31 @@ describe("pickUpLocationService", () => {
       ).rejects.toThrow("DB error");
     });
   });
+
+    describe("getPickUpLocationById", () => {
+    it("returns a pick up location by id", async () => {
+      mockRepo.findOne.mockResolvedValue({ locationId: "uuid-1", name: "Orchard Hill" });
+
+      const result = await pickUpLocationService.getPickUpLocationById("uuid-1");
+
+      expect(result.name).toBe("Orchard Hill");
+      expect(mockRepo.findOne).toHaveBeenCalledWith({ where: { locationId: "uuid-1" } });
+    });
+
+    it("throws 404 if location not found", async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        pickUpLocationService.getPickUpLocationById("uuid-1")
+      ).rejects.toThrow("Pick up location not found");
+    });
+
+    it("throws if database query fails", async () => {
+      mockRepo.findOne.mockRejectedValue(new Error("DB error"));
+
+      await expect(
+        pickUpLocationService.getPickUpLocationById("uuid-1")
+      ).rejects.toThrow("DB error");
+    });
+  });
 });
