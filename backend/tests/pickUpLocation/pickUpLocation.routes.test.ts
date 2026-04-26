@@ -49,4 +49,21 @@ describe("pickUpLocationRoutes", () => {
       expect(pickUpLocationController.getPickUpLocationById).toHaveBeenCalled();
     });
   });
+
+  describe("POST /api/pick-up-locations", () => {
+    it("calls createPickUpLocation controller", async () => {
+      (
+        pickUpLocationController.createPickUpLocation as jest.Mock
+      ).mockImplementation((req, res) => {
+        res.status(201).json({ locationId: "uuid-1", name: "Orchard Hill" });
+      });
+
+      const res = await request(app)
+        .post("/api/pick-up-locations")
+        .send({ name: "Orchard Hill" });
+
+      expect(res.status).toBe(201);
+      expect(pickUpLocationController.createPickUpLocation).toHaveBeenCalled();
+    });
+  });
 });
