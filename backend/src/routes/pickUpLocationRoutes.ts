@@ -10,4 +10,7 @@ router.post("/", protect, requireAdmin, pickUpLocationController.createPickUpLoc
 router.get("/", pickUpLocationController.getAllPickUpLocations);
 router.get("/:id", pickUpLocationController.getPickUpLocationById);
 
+router.patch("/:id", protect, requireAdmin, pickUpLocationController.updatePickUpLocation);
+router.delete("/:id", protect, requireAdmin, pickUpLocationController.deletePickUpLocation);
+
 export default router;
