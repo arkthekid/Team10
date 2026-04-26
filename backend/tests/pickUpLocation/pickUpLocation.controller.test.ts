@@ -305,4 +305,59 @@ describe("pickUpLocationController", () => {
       expect(error.message).toBe("Pick up location not found");
     });
   });
+
+    describe("deletePickUpLocation", () => {
+    it("returns 200 and success message on success", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      (pickUpLocationService.deletePickUpLocation as jest.Mock).mockResolvedValue({
+        message: "Pick up location deleted successfully",
+      });
+
+      pickUpLocationController.deletePickUpLocation(
+        mockReq as any,
+        mockRes as Response,
+        mockNext
+      );
+      await flushPromises();
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        message: "Pick up location deleted successfully",
+      });
+    });
+
+    it("calls next with 404 error when location not found", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      (pickUpLocationService.deletePickUpLocation as jest.Mock).mockRejectedValue(
+        new AppError("Pick up location not found", 404)
+      );
+
+      pickUpLocationController.deletePickUpLocation(
+        mockReq as any,
+        mockRes as Response,
+        mockNext
+      );
+      await flushPromises();
+
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0] as AppError;
+      expect(error.message).toBe("Pick up location not found");
+    });
+
+    it("calls next with error when service throws", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      (pickUpLocationService.deletePickUpLocation as jest.Mock).mockRejectedValue(
+        new Error("DB error")
+      );
+
+      pickUpLocationController.deletePickUpLocation(
+        mockReq as any,
+        mockRes as Response,
+        mockNext
+      );
+      await flushPromises();
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+    });
+  });
 });
