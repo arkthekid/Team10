@@ -22,3 +22,14 @@ export async function getAllPickUpLocations() {
   const repo = getRepo();
   return await repo.find({ order: { name: "ASC" } });
 }
+
+export async function getPickUpLocationById(locationId: string) {
+  const repo = getRepo();
+
+  const location = await repo.findOne({ where: { locationId } });
+  if (!location) {
+    throw new AppError("Pick up location not found", 404);
+  }
+
+  return location;
+}
