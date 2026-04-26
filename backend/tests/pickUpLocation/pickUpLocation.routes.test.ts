@@ -66,4 +66,21 @@ describe("pickUpLocationRoutes", () => {
       expect(pickUpLocationController.createPickUpLocation).toHaveBeenCalled();
     });
   });
+
+  describe("PATCH /api/pick-up-locations/:id", () => {
+    it("calls updatePickUpLocation controller", async () => {
+      (
+        pickUpLocationController.updatePickUpLocation as jest.Mock
+      ).mockImplementation((req, res) => {
+        res.status(200).json({ locationId: "uuid-1", name: "Updated Name" });
+      });
+
+      const res = await request(app)
+        .patch("/api/pick-up-locations/uuid-1")
+        .send({ name: "Updated Name" });
+
+      expect(res.status).toBe(200);
+      expect(pickUpLocationController.updatePickUpLocation).toHaveBeenCalled();
+    });
+  });
 });
