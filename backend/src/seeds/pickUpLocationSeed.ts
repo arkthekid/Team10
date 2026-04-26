@@ -20,11 +20,22 @@ const diningLocations = [
   "Berkshire Dining Commons",
 ];
 
+const campusLocations = [
+  "W.E.B. Du Bois Library",
+  "Student Union",
+  "Recreation Center",
+  "Campus Pond",
+  "Integrative Learning Center",
+  "Fine Arts Center",
+];
+
 const seed = async () => {
   await AppDataSource.initialize();
   const repo = AppDataSource.getRepository(pickUpLocation);
 
-  for (const name of residentialLocations) {
+  const allLocations = [...residentialLocations, ...diningLocations, ...campusLocations];
+
+  for (const name of allLocations) {
     const existing = await repo.findOne({ where: { name } });
     if (!existing) {
       const location = repo.create({ name });
