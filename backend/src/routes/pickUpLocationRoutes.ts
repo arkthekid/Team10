@@ -7,4 +7,7 @@ const router = Router();
 
 router.post("/", protect, requireAdmin, pickUpLocationController.createPickUpLocation);
 
+router.get("/", pickUpLocationController.getAllPickUpLocations);
+router.get("/:id", pickUpLocationController.getPickUpLocationById);
+
 export default router;
