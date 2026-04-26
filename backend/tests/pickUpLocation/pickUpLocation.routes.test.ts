@@ -22,16 +22,31 @@ describe("pickUpLocationRoutes", () => {
 
   describe("GET /api/pick-up-locations", () => {
     it("calls getAllPickUpLocations controller", async () => {
-      (pickUpLocationController.getAllPickUpLocations as jest.Mock).mockImplementation(
-        (req, res) => {
-          res.status(200).json([]);
-        }
-      );
+      (
+        pickUpLocationController.getAllPickUpLocations as jest.Mock
+      ).mockImplementation((req, res) => {
+        res.status(200).json([]);
+      });
 
       const res = await request(app).get("/api/pick-up-locations");
 
       expect(res.status).toBe(200);
       expect(pickUpLocationController.getAllPickUpLocations).toHaveBeenCalled();
+    });
+  });
+
+  describe("GET /api/pick-up-locations/:id", () => {
+    it("calls getPickUpLocationById controller", async () => {
+      (
+        pickUpLocationController.getPickUpLocationById as jest.Mock
+      ).mockImplementation((req, res) => {
+        res.status(200).json({ locationId: "uuid-1", name: "Orchard Hill" });
+      });
+
+      const res = await request(app).get("/api/pick-up-locations/uuid-1");
+
+      expect(res.status).toBe(200);
+      expect(pickUpLocationController.getPickUpLocationById).toHaveBeenCalled();
     });
   });
 });
