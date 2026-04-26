@@ -33,3 +33,17 @@ export const getAllPickUpLocations = async (
     next(error);
   }
 };
+
+export const getPickUpLocationById = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const location = await pickUpLocationService.getPickUpLocationById(id);
+    res.status(200).json(location);
+  } catch (error) {
+    next(error);
+  }
+};
