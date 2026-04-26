@@ -83,4 +83,21 @@ describe("pickUpLocationRoutes", () => {
       expect(pickUpLocationController.updatePickUpLocation).toHaveBeenCalled();
     });
   });
+
+  describe("DELETE /api/pick-up-locations/:id", () => {
+    it("calls deletePickUpLocation controller", async () => {
+      (
+        pickUpLocationController.deletePickUpLocation as jest.Mock
+      ).mockImplementation((req, res) => {
+        res
+          .status(200)
+          .json({ message: "Pick up location deleted successfully" });
+      });
+
+      const res = await request(app).delete("/api/pick-up-locations/uuid-1");
+
+      expect(res.status).toBe(200);
+      expect(pickUpLocationController.deletePickUpLocation).toHaveBeenCalled();
+    });
+  });
 });
