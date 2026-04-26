@@ -29,6 +29,7 @@ export function createApp() {
   app.use("/api/messages", messageRoutes);
   app.use("/api/favorites", favoriteRoutes);
   app.use("/api/blocks", blockRoutes);
+  app.use("/api/pick-up-locations", pickUpLocationRoutes);
 
   app.use(errorHandler);
 
