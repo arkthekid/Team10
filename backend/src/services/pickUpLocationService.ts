@@ -17,3 +17,8 @@ export async function createPickUpLocation(name: string) {
 
   return location;
 }
+
+export async function getAllPickUpLocations() {
+  const repo = getRepo();
+  return await repo.find({ order: { name: "ASC" } });
+}
