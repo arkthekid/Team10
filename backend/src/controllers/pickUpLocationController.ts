@@ -65,3 +65,17 @@ export const updatePickUpLocation = async (
     next(error);
   }
 };
+
+export const deletePickUpLocation = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const result = await pickUpLocationService.deletePickUpLocation(id);
+    res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
