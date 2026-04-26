@@ -33,3 +33,17 @@ export async function getPickUpLocationById(locationId: string) {
 
   return location;
 }
+
+export async function updatePickUpLocation(locationId: string, name: string) {
+  const repo = getRepo();
+
+  const location = await repo.findOne({ where: { locationId } });
+  if (!location) {
+    throw new AppError("Pick up location not found", 404);
+  }
+
+  location.name = name;
+  await repo.save(location);
+
+  return location;
+}
