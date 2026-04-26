@@ -110,4 +110,33 @@ describe("pickUpLocationService", () => {
       ).rejects.toThrow("DB error");
     });
   });
+
+    describe("updatePickUpLocation", () => {
+    it("updates a pick up location successfully", async () => {
+      mockRepo.findOne.mockResolvedValue({ locationId: "uuid-1", name: "Orchard Hill" });
+      mockRepo.save.mockResolvedValue({ locationId: "uuid-1", name: "Updated Name" });
+
+      const result = await pickUpLocationService.updatePickUpLocation("uuid-1", "Updated Name");
+
+      expect(result.name).toBe("Updated Name");
+      expect(mockRepo.save).toHaveBeenCalled();
+    });
+
+    it("throws 404 if location not found", async () => {
+      mockRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        pickUpLocationService.updatePickUpLocation("uuid-1", "Updated Name")
+      ).rejects.toThrow("Pick up location not found");
+    });
+
+    it("throws if save fails", async () => {
+      mockRepo.findOne.mockResolvedValue({ locationId: "uuid-1", name: "Orchard Hill" });
+      mockRepo.save.mockRejectedValue(new Error("Save failed"));
+
+      await expect(
+        pickUpLocationService.updatePickUpLocation("uuid-1", "Updated Name")
+      ).rejects.toThrow("Save failed");
+    });
+  });
 });
