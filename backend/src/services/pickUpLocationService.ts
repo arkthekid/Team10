@@ -47,3 +47,16 @@ export async function updatePickUpLocation(locationId: string, name: string) {
 
   return location;
 }
+
+export async function deletePickUpLocation(locationId: string) {
+  const repo = getRepo();
+
+  const location = await repo.findOne({ where: { locationId } });
+  if (!location) {
+    throw new AppError("Pick up location not found", 404);
+  }
+
+  await repo.remove(location);
+
+  return { message: "Pick up location deleted successfully" };
+}
