@@ -8,7 +8,7 @@ const conversationRepo = () => AppDataSource.getRepository(Conversation);
 
 const assertMember = async (conversationId: string, userId: string) => {
   const conversation = await conversationRepo().findOne({
-    where: { id: conversationId },
+    where: { conversationId: conversationId },
   });
   if (!conversation) throw new AppError("Conversation not found", 404);
   if (conversation.buyerId !== userId && conversation.sellerId !== userId) {
