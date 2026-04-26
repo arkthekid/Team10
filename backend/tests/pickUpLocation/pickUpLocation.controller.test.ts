@@ -248,4 +248,61 @@ describe("pickUpLocationController", () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
   });
+
+  describe("updatePickUpLocation", () => {
+    it("returns 200 and updated location on success", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      mockReq.body = { name: "Updated Name" };
+      (pickUpLocationService.updatePickUpLocation as jest.Mock).mockResolvedValue({
+        locationId: "uuid-1",
+        name: "Updated Name",
+      });
+
+      pickUpLocationController.updatePickUpLocation(
+        mockReq as any,
+        mockRes as Response,
+        mockNext
+      );
+      await flushPromises();
+
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({ locationId: "uuid-1", name: "Updated Name" });
+    });
+
+    it("calls next with 400 AppError when name is missing", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      mockReq.body = {};
+
+      pickUpLocationController.updatePickUpLocation(
+        mockReq as any,
+        mockRes as Response,
+        mockNext
+      );
+      await flushPromises();
+
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0] as AppError;
+      expect(error).toBeInstanceOf(AppError);
+      expect(error.message).toBe("Name is required");
+    });
+
+    it("calls next with error when service throws", async () => {
+      mockReq.params = { id: "uuid-1" } as any;
+      mockReq.body = { name: "Updated Name" };
+      (pickUpLocationService.updatePickUpLocation as jest.Mock).mockRejectedValue(
+        new AppError("Pick up location not found", 404)
+      );
+
+      pickUpLocationController.updatePickUpLocation(
+        mockReq as any,
+        mockRes as Response,
+        mockNext
+      );
+      await flushPromises();
+
+      expect(mockNext).toHaveBeenCalled();
+      const error = mockNext.mock.calls[0][0] as AppError;
+      expect(error.message).toBe("Pick up location not found");
+    });
+  });
 });
