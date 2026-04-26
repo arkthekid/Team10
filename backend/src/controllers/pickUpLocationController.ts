@@ -20,3 +20,16 @@ export const createPickUpLocation = async (
     next(error);
   }
 };
+
+export const getAllPickUpLocations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const locations = await pickUpLocationService.getAllPickUpLocations();
+    res.status(200).json(locations);
+  } catch (error) {
+    next(error);
+  }
+};
