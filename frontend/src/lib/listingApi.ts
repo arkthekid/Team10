@@ -15,7 +15,7 @@ export async function getMyListings() {
 export async function createListing(listingData: {
   name: string;
   description: string;
-  price: number;
+  price: number | null;
   pickUpLocation: string;
   condition: string;
   category: string;
@@ -23,6 +23,24 @@ export async function createListing(listingData: {
 }) {
   return apiFetch("/listings", {
     method: "POST",
+    body: JSON.stringify(listingData),
+  });
+}
+
+export async function updateListing(
+  id: string,
+  listingData: {
+    name: string;
+    description: string;
+    price: number | null;
+    pickUpLocation: string;
+    condition: string;
+    category: string;
+    imageUrl?: string;
+  }
+) {
+  return apiFetch(`/listings/${id}`, {
+    method: "PATCH",
     body: JSON.stringify(listingData),
   });
 }

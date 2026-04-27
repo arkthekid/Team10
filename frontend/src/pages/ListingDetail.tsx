@@ -7,8 +7,10 @@ import {
   ShieldX,
   Trash2,
   Heart,
+  Pencil,
 } from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
+import SafetyNotice from "@/components/SafetyNotice";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { getListingById, deleteListing } from "../lib/listingApi";
@@ -18,6 +20,41 @@ import {
   getMyFavorites,
   removeFavorite,
 } from "../lib/favoriteApi";
+
+const formatCategory = (value: any) => {
+  if (!value) return "General";
+
+  if (typeof value === "object") {
+    const nestedValue =
+      value.name || value.label || value.value || value.category || "General";
+
+    return formatCategory(nestedValue);
+  }
+
+  return String(value)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const getListingImage = (listing: any) => {
+  const firstImage = Array.isArray(listing.images)
+    ? listing.images[0]?.url ||
+      listing.images[0]?.imageUrl ||
+      listing.images[0]?.publicUrl ||
+      listing.images[0]
+    : undefined;
+
+  return (
+    listing.imageUrl ||
+    listing.image ||
+    listing.photoUrl ||
+    listing.photo ||
+    listing.listingImage ||
+    firstImage ||
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80"
+  );
+};
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -31,6 +68,8 @@ const ListingDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showSafetyNotice, setShowSafetyNotice] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,8 +79,13 @@ const ListingDetail = () => {
       try {
         setLoading(true);
         setError("");
+
         const data = await getListingById(id);
-        setListing(data.listing || data);
+        const loadedListing = data.listing || data;
+
+        console.log("Loaded listing:", loadedListing);
+
+        setListing(loadedListing);
       } catch (err: any) {
         setError(err.message || "Listing not found");
       } finally {
@@ -67,7 +111,13 @@ const ListingDetail = () => {
 
         const found = favorites.some((fav: any) => {
           const favoriteId =
-            fav.listingId || fav.id || fav.productId || fav._id;
+            fav.listingId ||
+            fav.id ||
+            fav.productId ||
+            fav._id ||
+            fav.listing?.listingId ||
+            fav.listing?.id;
+
           return String(favoriteId) === String(id);
         });
 
@@ -94,7 +144,9 @@ const ListingDetail = () => {
   const handleDelete = async () => {
     if (!id) return;
 
-    const confirmed = window.confirm("Are you sure you want to delete this listing?");
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this listing?"
+    );
     if (!confirmed) return;
 
     try {
@@ -111,10 +163,14 @@ const ListingDetail = () => {
   };
 
   const handleBlockSeller = async () => {
-    console.log("listing object:", listing);
-    console.log("sellerId:", listing?.sellerId);
+    const sellerId =
+      listing?.sellerId ||
+      listing?.seller?.id ||
+      listing?.seller?.userId ||
+      listing?.user?.id ||
+      listing?.user?.userId;
 
-    if (!listing?.sellerId) {
+    if (!sellerId) {
       toast.error("Seller information not found");
       return;
     }
@@ -126,7 +182,7 @@ const ListingDetail = () => {
 
     try {
       setBlocking(true);
-      await blockUser(listing.sellerId);
+      await blockUser(sellerId);
       toast.success("Seller blocked successfully");
       navigate("/browse");
     } catch (err: any) {
@@ -160,6 +216,21 @@ const ListingDetail = () => {
     }
   };
 
+  const handleMessageSeller = () => {
+    setShowSafetyNotice(true);
+  };
+
+  const handleSafetyProceed = () => {
+    setShowSafetyNotice(false);
+    navigate(`/messages?listingId=${id}`);
+  };
+
+  const handleEditListing = () => {
+    if (!id) return;
+    setMenuOpen(false);
+    navigate(`/listing/${id}/edit`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -183,20 +254,37 @@ const ListingDetail = () => {
   }
 
   const title = listing.name || listing.title || "Untitled Listing";
+
   const price =
     listing.price === null || listing.price === undefined
       ? null
       : Number(listing.price);
 
-  const image =
-    listing.imageUrl ||
-    listing.image ||
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
+  const image = getListingImage(listing);
 
-  const location = listing.pickUpLocation || listing.location || "Amherst, MA";
+  const location = listing.pickUpLocation || listing.location || "Not provided";
   const description = listing.description || "No description provided.";
-  const category = listing.category || "General";
-  const sellerName = listing.sellerName || listing.nameOfSeller || "Seller";
+
+  const rawCategory =
+    listing.category ||
+    listing.categoryName ||
+    listing.categoryType ||
+    listing.listingCategory ||
+    listing.type ||
+    listing.itemCategory ||
+    listing.productCategory ||
+    "General";
+
+  const category = formatCategory(rawCategory);
+
+  const condition = listing.condition || "Not provided";
+
+  const sellerName =
+    listing.sellerName ||
+    listing.nameOfSeller ||
+    listing.seller?.name ||
+    listing.user?.name ||
+    "Seller";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -219,12 +307,16 @@ const ListingDetail = () => {
               onClick={handleFavoriteToggle}
               disabled={favoriteLoading}
               className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
-              aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
+              aria-label={
+                isFavorited ? "Remove from favorites" : "Add to favorites"
+              }
               title={isFavorited ? "Remove from favorites" : "Add to favorites"}
             >
               <Heart
                 className={`w-6 h-6 transition-colors ${
-                  isFavorited ? "fill-red-500 text-red-500" : "text-foreground"
+                  isFavorited
+                    ? "fill-red-500 text-red-500"
+                    : "text-foreground"
                 }`}
               />
             </button>
@@ -240,6 +332,15 @@ const ListingDetail = () => {
 
               {menuOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-card border rounded-xl shadow-lg p-2 z-20">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
+                    onClick={handleEditListing}
+                  >
+                    <Pencil className="w-5 h-5" />
+                    <span>Edit Listing</span>
+                  </button>
+
                   <button
                     type="button"
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
@@ -264,7 +365,7 @@ const ListingDetail = () => {
 
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600 disabled:opacity-60"
                     onClick={handleDelete}
                     disabled={deleting}
                   >
@@ -283,6 +384,10 @@ const ListingDetail = () => {
               src={image}
               alt={title}
               className="w-full aspect-square object-cover"
+              onError={(e) => {
+                e.currentTarget.src =
+                  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
+              }}
             />
           </div>
 
@@ -290,22 +395,52 @@ const ListingDetail = () => {
             <h1 className="text-4xl font-bold mb-2">{title}</h1>
 
             <p className="text-2xl font-bold text-primary mb-6">
-              {price === null ? "FREE" : `$${price.toLocaleString()}`}
+              {price === null || Number(price) === 0
+                ? "FREE"
+                : `$${price.toLocaleString()}`}
             </p>
 
-            <p className="text-muted-foreground mb-2">{location}</p>
-            <p className="text-muted-foreground mb-2">Posted by {sellerName}</p>
+            <div className="space-y-3 text-base mb-6">
+              <p>
+                <span className="font-semibold">Pick-up Location: </span>
+                <span className="text-muted-foreground">{location}</span>
+              </p>
 
-            <div className="inline-block px-3 py-1 rounded-md bg-muted text-sm mb-6">
-              {category}
+              <p>
+                <span className="font-semibold">Posted by: </span>
+                <span className="text-muted-foreground">{sellerName}</span>
+              </p>
+
+              <p>
+                <span className="font-semibold">Category: </span>
+                <span className="inline-block px-3 py-1 rounded-md bg-muted text-sm">
+                  {category}
+                </span>
+              </p>
+
+              <p>
+                <span className="font-semibold">Condition: </span>
+                <span className="text-muted-foreground">{condition}</span>
+              </p>
+
+              <div>
+                <p className="font-semibold mb-1">Description:</p>
+                <p className="text-lg leading-8">{description}</p>
+              </div>
             </div>
 
-            <p className="text-lg leading-8 mb-10">{description}</p>
-
-            <Button className="w-full h-14 text-lg">Message Seller</Button>
+            <Button onClick={handleMessageSeller} className="w-full h-14 text-lg">
+              Message Seller
+            </Button>
           </div>
         </div>
       </main>
+
+      <SafetyNotice
+        open={showSafetyNotice}
+        onClose={() => setShowSafetyNotice(false)}
+        onProceed={handleSafetyProceed}
+      />
     </div>
   );
 };

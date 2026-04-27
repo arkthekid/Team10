@@ -21,6 +21,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 const CreateListing = () => {
   const navigate = useNavigate();
+
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
@@ -30,6 +31,7 @@ const CreateListing = () => {
   const [images, setImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,6 +43,7 @@ const CreateListing = () => {
 
     Array.from(files).forEach((file) => {
       if (newPreviewUrls.length + images.length >= 5) return;
+
       newPreviewUrls.push(URL.createObjectURL(file));
       newFiles.push(file);
     });
@@ -48,7 +51,9 @@ const CreateListing = () => {
     setImages((prev) => [...prev, ...newPreviewUrls].slice(0, 5));
     setImageFiles((prev) => [...prev, ...newFiles].slice(0, 5));
 
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const removeImage = (index: number) => {
@@ -56,13 +61,18 @@ const CreateListing = () => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const uploadImage = async (file: File) => {
+  const uploadListingImages = async (listingId: string, files: File[]) => {
+    if (files.length === 0) return;
+
     const formData = new FormData();
-    formData.append("image", file);
+
+    files.slice(0, 5).forEach((file) => {
+      formData.append("images", file);
+    });
 
     const token = localStorage.getItem("token");
 
-    const response = await fetch(`${API_URL}/upload`, {
+    const response = await fetch(`${API_URL}/listings/${listingId}/images`, {
       method: "POST",
       body: formData,
       headers: {
@@ -86,43 +96,85 @@ const CreateListing = () => {
       throw new Error(data.message || data.error || "Image upload failed");
     }
 
+    return data;
+  };
+
+  const getCreatedListingId = (result: any) => {
     return (
-      data.imageUrl ||
-      data.url ||
-      data.publicUrl ||
-      data.data?.imageUrl ||
-      data.data?.url ||
-      data.data?.publicUrl ||
-      ""
+      result?.listingId ||
+      result?.id ||
+      result?.listing?.listingId ||
+      result?.listing?.id ||
+      result?.data?.listingId ||
+      result?.data?.id ||
+      result?.data?.listing?.listingId ||
+      result?.data?.listing?.id
     );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+
+    if (!title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (!category) {
+      toast.error("Category is required");
+      return;
+    }
+
+    if (!pickUpLocation.trim()) {
+      toast.error("Pick-up location is required");
+      return;
+    }
+
+    if (!condition) {
+      toast.error("Condition is required");
+      return;
+    }
+
+    if (!description.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+
+    const numericPrice =
+      price.trim() === "" ? 0 : Number.parseInt(price.trim(), 10);
+
+    if (Number.isNaN(numericPrice) || numericPrice < 0) {
+      toast.error("Price must be a valid whole number");
+      return;
+    }
 
     try {
-      let uploadedImageUrl = "";
-
-      if (imageFiles.length > 0) {
-        uploadedImageUrl = await uploadImage(imageFiles[0]);
-        console.log("FINAL IMAGE URL:", uploadedImageUrl);
-      }
+      setLoading(true);
 
       const payload = {
-        name: title,
-        description,
-        price: price === "" ? 0 : Number(price),
-        pickUpLocation,
+        name: title.trim(),
+        description: description.trim(),
+        price: numericPrice,
+        pickUpLocation: pickUpLocation.trim(),
         condition,
         category,
-        imageUrl: uploadedImageUrl,
       };
 
       console.log("LISTING PAYLOAD:", payload);
 
       const result = await createListing(payload);
+
       console.log("CREATE LISTING RESPONSE:", result);
+
+      const listingId = getCreatedListingId(result);
+
+      if (imageFiles.length > 0 && listingId) {
+        await uploadListingImages(listingId, imageFiles);
+      }
+
+      if (imageFiles.length > 0 && !listingId) {
+        console.warn("Listing created, but no listingId was returned for image upload.");
+      }
 
       toast.success("Listing created successfully!");
       navigate("/browse");
@@ -137,6 +189,7 @@ const CreateListing = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <MarketplaceHeader />
+
       <main className="flex-1 max-w-lg mx-auto w-full p-4 md:p-6">
         <h2 className="text-2xl font-bold text-foreground mb-6">
           Create New Listing
@@ -159,6 +212,7 @@ const CreateListing = () => {
               id="price"
               type="number"
               min="0"
+              step="1"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="Leave empty for free"
@@ -171,6 +225,7 @@ const CreateListing = () => {
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
+
               <SelectContent>
                 {categories
                   .filter((c) => c !== "All")
@@ -189,6 +244,7 @@ const CreateListing = () => {
               id="pickUpLocation"
               value={pickUpLocation}
               onChange={(e) => setPickUpLocation(e.target.value)}
+              placeholder="e.g. Brett Hall"
               required
             />
           </div>
@@ -199,6 +255,7 @@ const CreateListing = () => {
               <SelectTrigger>
                 <SelectValue placeholder="Select condition" />
               </SelectTrigger>
+
               <SelectContent>
                 <SelectItem value="New">New</SelectItem>
                 <SelectItem value="Used">Used</SelectItem>
@@ -219,6 +276,7 @@ const CreateListing = () => {
 
           <div>
             <Label>Photos (up to 5)</Label>
+
             <div className="flex flex-wrap gap-3 mt-2">
               {images.map((src, i) => (
                 <div
@@ -230,6 +288,7 @@ const CreateListing = () => {
                     alt={`Upload ${i + 1}`}
                     className="w-full h-full object-cover"
                   />
+
                   <button
                     type="button"
                     onClick={() => removeImage(i)}
