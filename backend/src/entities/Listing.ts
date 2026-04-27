@@ -15,7 +15,7 @@ import { User } from "./User";
 import { Conversation } from "./Conversation";
 import { CategoryEntity } from "./Category";
 import { ListingImage } from "./ListingImage";
-// import { pickUpLocation } from "./pickUpLocation";
+import { pickUpLocation } from "./pickUpLocation";
 
 export type ListingStatus = "available" | "sold_pending" | "completed";
 
@@ -48,8 +48,8 @@ export class Listing {
   @Column({ type: "timestamp", nullable: true })
   buyerMarkedReceivedAt!: Date | null;
 
-  @Column("text")
-  pickUpLocation!: string;
+  @Column({ type: "text", nullable: true })
+  pickUpLocationId!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -81,7 +81,7 @@ export class Listing {
   @OneToMany(() => ListingImage, (images) => images.listing, { cascade: true, eager: true })
   images!: ListingImage[];
 
-  // @ManyToOne(() => pickUpLocation, (pickUpLocation: pickUpLocation) => pickUpLocation.listings)
-  // @JoinColumn({ name: "pickUpLocation" })
-  // pickUpLocation!: pickUpLocation;
+  @ManyToOne(() => pickUpLocation, (pickUpLocation: pickUpLocation) => pickUpLocation.listings)
+  @JoinColumn({ name: "pickUpLocationId" })
+  pickUpLocation!: pickUpLocation;
 }
