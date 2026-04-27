@@ -12,8 +12,21 @@ import {
 import { Button } from "@/components/ui/button";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import ListingCard from "@/components/ListingCard";
-import { getListings } from "@/lib/listingApi";
+import { getListingById, getListings } from "@/lib/listingApi";
 import { getBlockedUsers } from "@/lib/blockApi";
+
+const getListingId = (listing: any) => {
+  return listing.listingId || listing.id || listing.productId || listing._id;
+};
+
+const getListingCategory = (listing: any) => {
+  if (typeof listing.category === "string") return listing.category;
+  if (listing.category?.name) return listing.category.name;
+  if (listing.category?.label) return listing.category.label;
+  if (listing.category?.value) return listing.category.value;
+  if (listing.categoryId?.name) return listing.categoryId.name;
+  return "Uncategorized";
+};
 
 const Browse = () => {
   const [search, setSearch] = useState("");
@@ -41,6 +54,24 @@ const Browse = () => {
           ? listingsData.listings
           : [];
 
+        const fullListings = await Promise.all(
+          normalizedListings.map(async (listing: any) => {
+            const listingId = getListingId(listing);
+
+            if (!listingId) {
+              return listing;
+            }
+
+            try {
+              const detailData = await getListingById(String(listingId));
+              return detailData.listing || detailData;
+            } catch (err) {
+              console.warn("Failed to load listing detail:", listingId, err);
+              return listing;
+            }
+          })
+        );
+
         const normalizedBlocked = Array.isArray(blockedData)
           ? blockedData
           : Array.isArray((blockedData as any).blocks)
@@ -48,13 +79,21 @@ const Browse = () => {
           : [];
 
         const blockedIds = normalizedBlocked
-          .map((item: any) => item?.user?.id || item?.blockedId)
+          .map(
+            (item: any) =>
+              item?.user?.id ||
+              item?.user?.userId ||
+              item?.blocked?.id ||
+              item?.blocked?.userId ||
+              item?.blockedId
+          )
           .filter(Boolean)
           .map((id: any) => String(id));
 
-        setListings(normalizedListings);
+        setListings(fullListings);
         setBlockedUserIds(blockedIds);
       } catch (err: any) {
+        console.error("Failed to load listings:", err);
         setError(err.message || "Failed to load listings");
       } finally {
         setLoading(false);
@@ -69,6 +108,7 @@ const Browse = () => {
       const sellerId = String(
         listing.sellerId ||
           listing.seller?.id ||
+          listing.seller?.userId ||
           listing.userId ||
           listing.ownerId ||
           ""
@@ -80,42 +120,44 @@ const Browse = () => {
 
   const categories = useMemo(() => {
     const names = visibleListings
-      .map((l) => {
-        if (typeof l.category === "string") return l.category;
-        if (l.category?.name) return l.category.name;
-        if (l.categoryId?.name) return l.categoryId.name;
-        return null;
-      })
+      .map((listing) => getListingCategory(listing))
       .filter(Boolean);
 
     return ["All", ...Array.from(new Set(names as string[]))];
   }, [visibleListings]);
 
-  const filtered = visibleListings.filter((l) => {
-    const title = (l.title || l.name || "").toLowerCase();
-    const description = (l.description || "").toLowerCase();
+  const filtered = visibleListings.filter((listing) => {
+    const title = (listing.title || listing.name || "").toLowerCase();
+    const description = (listing.description || "").toLowerCase();
+    const location = (
+      listing.pickUpLocation ||
+      listing.location ||
+      ""
+    ).toLowerCase();
 
-    const listingCategory =
-      typeof l.category === "string"
-        ? l.category
-        : l.category?.name || l.categoryId?.name || "Uncategorized";
+    const listingCategory = getListingCategory(listing);
 
     const price =
-      l.price === null || l.price === undefined ? null : Number(l.price);
+      listing.price === null || listing.price === undefined
+        ? 0
+        : Number(listing.price);
+
+    const searchValue = search.toLowerCase();
 
     const matchSearch =
-      title.includes(search.toLowerCase()) ||
-      description.includes(search.toLowerCase());
+      title.includes(searchValue) ||
+      description.includes(searchValue) ||
+      location.includes(searchValue);
 
     const matchCategory = category === "All" || listingCategory === category;
 
     const matchPrice =
       priceFilter === "all" ||
-      (priceFilter === "free" && price === null) ||
-      (priceFilter === "under20" && price !== null && price < 20) ||
-      (priceFilter === "under50" && price !== null && price < 50) ||
-      (priceFilter === "under100" && price !== null && price < 100) ||
-      (priceFilter === "over100" && price !== null && price >= 100);
+      (priceFilter === "free" && price === 0) ||
+      (priceFilter === "under20" && price > 0 && price < 20) ||
+      (priceFilter === "under50" && price > 0 && price < 50) ||
+      (priceFilter === "under100" && price > 0 && price < 100) ||
+      (priceFilter === "over100" && price >= 100);
 
     return matchSearch && matchCategory && matchPrice;
   });
@@ -140,10 +182,11 @@ const Browse = () => {
             <SelectTrigger className="w-full sm:w-36 h-11">
               <SelectValue />
             </SelectTrigger>
+
             <SelectContent>
-              {categories.map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
+              {categories.map((categoryName) => (
+                <SelectItem key={categoryName} value={categoryName}>
+                  {categoryName}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -153,6 +196,7 @@ const Browse = () => {
             <SelectTrigger className="w-full sm:w-36 h-11">
               <SelectValue />
             </SelectTrigger>
+
             <SelectContent>
               <SelectItem value="all">All prices</SelectItem>
               <SelectItem value="free">Free</SelectItem>
@@ -180,15 +224,7 @@ const Browse = () => {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map((listing) => (
-                <ListingCard
-                  key={
-                    listing.id ||
-                    listing.listingId ||
-                    listing.productId ||
-                    listing._id
-                  }
-                  listing={listing}
-                />
+                <ListingCard key={getListingId(listing)} listing={listing} />
               ))}
             </div>
 
