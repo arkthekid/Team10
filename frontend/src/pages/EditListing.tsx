@@ -27,6 +27,7 @@ const EditListing = () => {
 
       try {
         setLoading(true);
+
         const data = await getListingById(id);
         const listing = data.listing || data;
 
@@ -36,16 +37,30 @@ const EditListing = () => {
             ? ""
             : String(Number(listing.price))
         );
-        setCategory(listing.category || "");
+
+        setCategory(
+          listing.category ||
+            listing.categoryName ||
+            listing.categoryType ||
+            listing.listingCategory ||
+            listing.category?.name ||
+            listing.category?.label ||
+            listing.category?.value ||
+            ""
+        );
+
         setPickUpLocation(listing.pickUpLocation || listing.location || "");
         setCondition(listing.condition || "");
         setDescription(listing.description || "");
+
         setImageUrl(
           listing.imageUrl ||
             listing.image ||
             listing.photoUrl ||
             listing.photo ||
             listing.listingImage ||
+            listing.images?.[0]?.url ||
+            listing.images?.[0]?.imageUrl ||
             ""
         );
       } catch (err: any) {
@@ -90,10 +105,13 @@ const EditListing = () => {
     }
 
     const numericPrice =
-      price.trim() === "" ? null : Number.parseInt(price.trim(), 10);
+      price.trim() === "" ? null : Number.parseFloat(price.trim());
 
-    if (price.trim() !== "" && (Number.isNaN(numericPrice) || numericPrice < 0)) {
-      toast.error("Price must be a valid whole number");
+    if (
+      price.trim() !== "" &&
+      (Number.isNaN(numericPrice) || numericPrice < 0)
+    ) {
+      toast.error("Price must be a valid number");
       return;
     }
 
@@ -113,6 +131,7 @@ const EditListing = () => {
       toast.success("Listing updated successfully");
       navigate(`/listing/${id}`);
     } catch (err: any) {
+      console.error("UPDATE LISTING ERROR:", err);
       toast.error(err.message || "Failed to update listing");
     } finally {
       setSaving(false);
@@ -152,7 +171,7 @@ const EditListing = () => {
             <Input
               type="number"
               min="0"
-              step="1"
+              step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="Leave empty for free"
@@ -173,6 +192,8 @@ const EditListing = () => {
               <option value="Clothing">Clothing</option>
               <option value="Furniture">Furniture</option>
               <option value="Housing">Housing</option>
+              <option value="School Supplies">School Supplies</option>
+              <option value="Sports">Sports</option>
               <option value="Other">Other</option>
             </select>
           </div>

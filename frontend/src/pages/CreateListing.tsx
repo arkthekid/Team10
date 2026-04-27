@@ -141,10 +141,10 @@ const CreateListing = () => {
     }
 
     const numericPrice =
-      price.trim() === "" ? 0 : Number.parseInt(price.trim(), 10);
+      price.trim() === "" ? 0 : Number.parseFloat(price.trim());
 
     if (Number.isNaN(numericPrice) || numericPrice < 0) {
-      toast.error("Price must be a valid whole number");
+      toast.error("Price must be a valid number");
       return;
     }
 
@@ -173,7 +173,9 @@ const CreateListing = () => {
       }
 
       if (imageFiles.length > 0 && !listingId) {
-        console.warn("Listing created, but no listingId was returned for image upload.");
+        console.warn(
+          "Listing created, but no listingId was returned for image upload."
+        );
       }
 
       toast.success("Listing created successfully!");
@@ -212,7 +214,7 @@ const CreateListing = () => {
               id="price"
               type="number"
               min="0"
-              step="1"
+              step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="Leave empty for free"
