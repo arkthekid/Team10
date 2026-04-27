@@ -29,15 +29,24 @@ export async function googleLogin(idToken: string) {
 }
 
 export async function verifyEmail(token: string) {
-  const data = await apiFetch(`/auth/verify-email?token=${encodeURIComponent(token)}`, {
-    method: "GET",
-  });
+  const data = await apiFetch(
+    `/auth/verify-email?token=${encodeURIComponent(token)}`,
+    {
+      method: "GET",
+    }
+  );
 
   if (data.token) {
     setToken(data.token);
   }
 
   return data;
+}
+
+export async function getCurrentUser() {
+  return apiFetch("/auth/me", {
+    method: "GET",
+  });
 }
 
 export async function logoutUser() {

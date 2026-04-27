@@ -6,8 +6,26 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { getBlockedUsers, unblockUser } from "@/lib/blockApi";
 
+const getBlockedUser = (item: any) => {
+  return item.user || item.blocked || item.blockedUser || {};
+};
+
+const getBlockedUserId = (item: any) => {
+  return (
+    item?.user?.id ||
+    item?.user?.userId ||
+    item?.blocked?.id ||
+    item?.blocked?.userId ||
+    item?.blockedUser?.id ||
+    item?.blockedUser?.userId ||
+    item?.blockedId ||
+    ""
+  );
+};
+
 const BlockedUsers = () => {
   const navigate = useNavigate();
+
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
@@ -39,7 +57,9 @@ const BlockedUsers = () => {
   }, []);
 
   const handleUnblock = async (userId: string) => {
-    const confirmed = window.confirm("Are you sure you want to unblock this seller?");
+    const confirmed = window.confirm(
+      "Are you sure you want to unblock this seller?"
+    );
     if (!confirmed) return;
 
     try {
@@ -47,7 +67,10 @@ const BlockedUsers = () => {
       await unblockUser(userId);
 
       setBlockedUsers((prev) =>
-        prev.filter((item) => String(item?.user?.id) !== String(userId))
+        prev.filter((item) => {
+          const blockedId = getBlockedUserId(item);
+          return String(blockedId) !== String(userId);
+        })
       );
 
       toast.success("Seller unblocked successfully");
@@ -83,29 +106,29 @@ const BlockedUsers = () => {
         {error && <p className="text-red-500">{error}</p>}
 
         {!loading && !error && blockedUsers.length === 0 && (
-          <p className="text-muted-foreground">You have not blocked any sellers.</p>
+          <p className="text-muted-foreground">
+            You have not blocked any sellers.
+          </p>
         )}
 
         {!loading && !error && blockedUsers.length > 0 && (
           <div className="space-y-4">
             {blockedUsers.map((item) => {
-              const user = item.user || {};
-              const userId = String(user.id || "");
+              const user = getBlockedUser(item);
+              const userId = String(getBlockedUserId(item));
 
               return (
                 <div
-                  key={item.id || userId}
+                  key={item.id || item.blockId || userId}
                   className="border rounded-2xl p-4 bg-card flex items-center justify-between gap-4"
                 >
                   <div>
                     <p className="text-lg font-semibold">
                       {user.name || "Unknown User"}
                     </p>
+
                     <p className="text-sm text-muted-foreground">
-                      {user.umassEmail || "No email available"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Role: {user.role || "User"}
+                      {user.umassEmail || user.email || "No email available"}
                     </p>
                   </div>
 
