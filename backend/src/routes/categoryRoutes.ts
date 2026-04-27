@@ -6,7 +6,7 @@ import { requireAdmin } from "../middleware/adminMiddleware";
 const router = Router();
 
 router.post("/", protect, requireAdmin, categoryController.createCategory);
-router.get("/", categoryController.getCategory);
+router.get("/", categoryController.getAllCategory);
 router.get("/:id", categoryController.getCategoryById);
 router.patch("/:id", protect, requireAdmin, categoryController.updateCategory);
 router.delete("/:id", protect, requireAdmin, categoryController.deleteCategory);
