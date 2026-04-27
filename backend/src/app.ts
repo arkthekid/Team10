@@ -7,6 +7,7 @@ import messageRoutes from "./routes/messageRoutes";
 import favoriteRoutes from "./routes/favoriteRoutes";
 import blockRoutes from "./routes/blockRoutes";
 import { errorHandler } from "./middleware/errorHandler";
+import pickUpLocationRoutes from "./routes/pickUpLocationRoutes";
 
 export function createApp() {
   const app = express();
@@ -28,6 +29,7 @@ export function createApp() {
   app.use("/api/messages", messageRoutes);
   app.use("/api/favorites", favoriteRoutes);
   app.use("/api/blocks", blockRoutes);
+  app.use("/api/pick-up-locations", pickUpLocationRoutes);
 
   app.use(errorHandler);
 
