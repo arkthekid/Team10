@@ -9,6 +9,7 @@ import EditListing from "./pages/EditListing";
 import Messages from "./pages/Messages";
 import Favorites from "./pages/Favorites";
 import BlockedUsers from "./pages/BlockedUsers";
+import MyListings from "./pages/MyListings";
 import NotFound from "./pages/NotFound";
 import VerifyEmail from "./pages/VerifyEmail";
 
@@ -26,6 +27,7 @@ const App = () => {
         <Route path="/messages" element={<Messages />} />
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/blocked-users" element={<BlockedUsers />} />
+        <Route path="/my-listings" element={<MyListings />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

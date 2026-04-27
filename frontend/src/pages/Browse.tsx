@@ -28,10 +28,23 @@ const getListingCategory = (listing: any) => {
   return "Uncategorized";
 };
 
+const getListingUpdatedTime = (listing: any) => {
+  const dateValue =
+    listing.updatedAt ||
+    listing.updated_at ||
+    listing.createdAt ||
+    listing.created_at;
+
+  const time = new Date(dateValue).getTime();
+
+  return Number.isNaN(time) ? 0 : time;
+};
+
 const Browse = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [priceFilter, setPriceFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("latest");
   const [listings, setListings] = useState<any[]>([]);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,41 +139,52 @@ const Browse = () => {
     return ["All", ...Array.from(new Set(names as string[]))];
   }, [visibleListings]);
 
-  const filtered = visibleListings.filter((listing) => {
-    const title = (listing.title || listing.name || "").toLowerCase();
-    const description = (listing.description || "").toLowerCase();
-    const location = (
-      listing.pickUpLocation ||
-      listing.location ||
-      ""
-    ).toLowerCase();
+  const filtered = visibleListings
+    .filter((listing) => {
+      const title = (listing.title || listing.name || "").toLowerCase();
+      const description = (listing.description || "").toLowerCase();
+      const location = (
+        listing.pickUpLocation ||
+        listing.location ||
+        ""
+      ).toLowerCase();
 
-    const listingCategory = getListingCategory(listing);
+      const listingCategory = getListingCategory(listing);
 
-    const price =
-      listing.price === null || listing.price === undefined
-        ? 0
-        : Number(listing.price);
+      const price =
+        listing.price === null || listing.price === undefined
+          ? 0
+          : Number(listing.price);
 
-    const searchValue = search.toLowerCase();
+      const searchValue = search.toLowerCase();
 
-    const matchSearch =
-      title.includes(searchValue) ||
-      description.includes(searchValue) ||
-      location.includes(searchValue);
+      const matchSearch =
+        title.includes(searchValue) ||
+        description.includes(searchValue) ||
+        location.includes(searchValue);
 
-    const matchCategory = category === "All" || listingCategory === category;
+      const matchCategory = category === "All" || listingCategory === category;
 
-    const matchPrice =
-      priceFilter === "all" ||
-      (priceFilter === "free" && price === 0) ||
-      (priceFilter === "under20" && price > 0 && price < 20) ||
-      (priceFilter === "under50" && price > 0 && price < 50) ||
-      (priceFilter === "under100" && price > 0 && price < 100) ||
-      (priceFilter === "over100" && price >= 100);
+      const matchPrice =
+        priceFilter === "all" ||
+        (priceFilter === "free" && price === 0) ||
+        (priceFilter === "under20" && price > 0 && price < 20) ||
+        (priceFilter === "under50" && price > 0 && price < 50) ||
+        (priceFilter === "under100" && price > 0 && price < 100) ||
+        (priceFilter === "over100" && price >= 100);
 
-    return matchSearch && matchCategory && matchPrice;
-  });
+      return matchSearch && matchCategory && matchPrice;
+    })
+    .sort((a, b) => {
+      const aTime = getListingUpdatedTime(a);
+      const bTime = getListingUpdatedTime(b);
+
+      if (sortOrder === "earliest") {
+        return aTime - bTime;
+      }
+
+      return bTime - aTime;
+    });
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -177,6 +201,17 @@ const Browse = () => {
               className="pl-9 h-11"
             />
           </div>
+
+          <Select value={sortOrder} onValueChange={setSortOrder}>
+            <SelectTrigger className="w-full sm:w-48 h-11">
+              <SelectValue />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="latest">Latest to earliest</SelectItem>
+              <SelectItem value="earliest">Earliest to latest</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger className="w-full sm:w-36 h-11">
