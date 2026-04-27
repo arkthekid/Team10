@@ -140,9 +140,18 @@ const getUserName = (userData: any) => {
 const getSellerId = (listing: any) => {
   return String(
     listing?.sellerId ||
+      listing?.sellerID ||
+      listing?.seller_id ||
       listing?.seller?.id ||
       listing?.seller?.userId ||
+      listing?.seller?.sellerId ||
       listing?.seller?._id ||
+      listing?.userId ||
+      listing?.user_id ||
+      listing?.ownerId ||
+      listing?.owner_id ||
+      listing?.createdById ||
+      listing?.created_by ||
       listing?.user?.id ||
       listing?.user?.userId ||
       listing?.user?._id ||
@@ -241,13 +250,6 @@ const ListingDetail = () => {
         setListing(loadedListing);
         setCurrentUser(userData || jwtUser);
         setIsMyListing(foundInMyListings);
-
-        console.log("Loaded listing:", loadedListing);
-        console.log("Current user from /auth/me:", userData);
-        console.log("Current user from token:", jwtUser);
-        console.log("My listings:", myListings);
-        console.log("CURRENT LISTING ID:", currentListingId);
-        console.log("FOUND IN MY LISTINGS:", foundInMyListings);
       } catch (err: any) {
         setError(err.message || "Listing not found");
       } finally {
@@ -376,20 +378,6 @@ const ListingDetail = () => {
       sellerNameForCheck === currentUserName) ||
     (sellerNameForCheck && tokenName && sellerNameForCheck === tokenName);
 
-  console.log("OWNERSHIP CHECK:", {
-    isMyListing,
-    sellerId,
-    currentUserId,
-    sellerEmail,
-    currentUserEmail,
-    sellerNameForCheck,
-    currentUserName,
-    tokenUserId,
-    tokenEmail,
-    tokenName,
-    isOwnListing,
-  });
-
   const handleDelete = async () => {
     if (!id) return;
 
@@ -418,7 +406,14 @@ const ListingDetail = () => {
       return;
     }
 
-    if (!sellerId) {
+    const sellerIdToBlock = getSellerId(listing);
+
+    console.log("BLOCK SELLER DEBUG:", {
+      listing,
+      sellerIdToBlock,
+    });
+
+    if (!sellerIdToBlock) {
       toast.error("Seller information not found");
       return;
     }
@@ -430,14 +425,16 @@ const ListingDetail = () => {
 
     try {
       setBlocking(true);
-      await blockUser(sellerId);
+      await blockUser(sellerIdToBlock);
+
       toast.success("Seller blocked successfully");
+      setMenuOpen(false);
       navigate("/browse");
     } catch (err: any) {
+      console.error("BLOCK SELLER ERROR:", err);
       toast.error(err.message || "Failed to block seller");
     } finally {
       setBlocking(false);
-      setMenuOpen(false);
     }
   };
 
