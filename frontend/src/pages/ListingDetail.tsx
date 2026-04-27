@@ -8,6 +8,8 @@ import {
   Trash2,
   Heart,
   Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import SafetyNotice from "@/components/SafetyNotice";
@@ -25,6 +27,9 @@ import {
   getMyFavorites,
   removeFavorite,
 } from "../lib/favoriteApi";
+
+const fallbackImage =
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
 
 const formatCategory = (value: any) => {
   if (!value) return "General";
@@ -54,23 +59,36 @@ const getListingId = (listing: any) => {
   );
 };
 
-const getListingImage = (listing: any) => {
-  const firstImage = Array.isArray(listing.images)
-    ? listing.images[0]?.url ||
-      listing.images[0]?.imageUrl ||
-      listing.images[0]?.publicUrl ||
-      listing.images[0]
-    : undefined;
+const getListingImages = (listing: any) => {
+  const uploadedImages = Array.isArray(listing.images)
+    ? listing.images
+        .map((image: any) => {
+          if (typeof image === "string") return image;
 
-  return (
-    listing.imageUrl ||
-    listing.image ||
-    listing.photoUrl ||
-    listing.photo ||
-    listing.listingImage ||
-    firstImage ||
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80"
-  );
+          return (
+            image?.url ||
+            image?.imageUrl ||
+            image?.publicUrl ||
+            image?.src ||
+            ""
+          );
+        })
+        .filter(Boolean)
+    : [];
+
+  const singleImages = [
+    listing.imageUrl,
+    listing.image,
+    listing.photoUrl,
+    listing.photo,
+    listing.listingImage,
+  ].filter(Boolean);
+
+  const allImages = [...uploadedImages, ...singleImages];
+
+  const uniqueImages = Array.from(new Set(allImages));
+
+  return uniqueImages.length > 0 ? uniqueImages : [fallbackImage];
 };
 
 const formatDate = (value: any) => {
@@ -208,6 +226,7 @@ const ListingDetail = () => {
   const [listing, setListing] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isMyListing, setIsMyListing] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -227,6 +246,7 @@ const ListingDetail = () => {
       try {
         setLoading(true);
         setError("");
+        setCurrentImageIndex(0);
 
         const listingData = await getListingById(id);
         const loadedListing = listingData.listing || listingData;
@@ -388,10 +408,15 @@ const ListingDetail = () => {
 
     try {
       setDeleting(true);
+      console.log("Deleting listing:", id);
+
       await deleteListing(id);
+
       toast.success("Listing deleted successfully");
+      setMenuOpen(false);
       navigate("/browse");
     } catch (err: any) {
+      console.error("DELETE LISTING ERROR:", err);
       toast.error(err.message || "Failed to delete listing");
     } finally {
       setDeleting(false);
@@ -407,11 +432,6 @@ const ListingDetail = () => {
     }
 
     const sellerIdToBlock = getSellerId(listing);
-
-    console.log("BLOCK SELLER DEBUG:", {
-      listing,
-      sellerIdToBlock,
-    });
 
     if (!sellerIdToBlock) {
       toast.error("Seller information not found");
@@ -481,6 +501,22 @@ const ListingDetail = () => {
     navigate(`/listing/${id}/edit`);
   };
 
+  const images = getListingImages(listing);
+  const currentImage = images[currentImageIndex] || fallbackImage;
+  const hasMultipleImages = images.length > 1;
+
+  const showPreviousImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? images.length - 1 : prev - 1
+    );
+  };
+
+  const showNextImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === images.length - 1 ? 0 : prev + 1
+    );
+  };
+
   const title = listing.name || listing.title || "Untitled Listing";
 
   const price =
@@ -488,7 +524,6 @@ const ListingDetail = () => {
       ? null
       : Number(listing.price);
 
-  const image = getListingImage(listing);
   const location = listing.pickUpLocation || listing.location || "Not provided";
   const description = listing.description || "No description provided.";
 
@@ -620,16 +655,41 @@ const ListingDetail = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 items-start">
-          <div className="rounded-2xl overflow-hidden border bg-card">
+          <div className="relative rounded-2xl overflow-hidden border bg-card">
             <img
-              src={image}
+              src={currentImage}
               alt={title}
               className="w-full aspect-square object-cover"
               onError={(e) => {
-                e.currentTarget.src =
-                  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
+                e.currentTarget.src = fallbackImage;
               }}
             />
+
+            {hasMultipleImages && (
+              <>
+                <button
+                  type="button"
+                  onClick={showPreviousImage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-full p-2 shadow-md"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={showNextImage}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-full p-2 shadow-md"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/85 rounded-full px-3 py-1 text-sm font-medium">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
           </div>
 
           <div>
