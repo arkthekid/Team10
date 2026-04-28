@@ -7,8 +7,9 @@ import { GetListingDto } from "../dto/getListing.dto";
 export const createListing = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = getUserId(req);
+    const { categoryIds, ...data } = req.body;
 
-    const newListing = await listingService.createListing(req.body, userId);
+    const newListing = await listingService.createListing(req.body, categoryIds, userId);
 
     res.status(201).json(newListing);
   } catch (error) {
