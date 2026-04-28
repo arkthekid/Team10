@@ -8,7 +8,6 @@ import favoriteRoutes from "./routes/favoriteRoutes";
 import blockRoutes from "./routes/blockRoutes";
 import reportRoutes from "./routes/reportRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
-import reportRoutes from "./routes/reportRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import pickUpLocationRoutes from "./routes/pickUpLocationRoutes";
 
