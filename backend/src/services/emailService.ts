@@ -31,3 +31,37 @@ export const sendVerificationEmail = async (
     `,
   });
 };
+
+type SendReportEmailInput = {
+  reportId: string;
+  targetType: "user" | "listing";
+  reason: string;
+  comments?: string | null;
+  reporterEmail?: string | null;
+  reportedUserEmail?: string | null;
+  reportedListingId?: string | null;
+  conversationId?: string | null;
+};
+
+export const sendReportNotificationEmail = async (
+  data: SendReportEmailInput
+) => {
+  await resend.emails.send({
+    from: "onboarding@resend.dev",
+    to: "gmarathe@umass.edu",
+    subject: `New marketplace report: ${data.targetType}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 700px; margin: 0 auto;">
+        <h2 style="color: #8B0000;">New Report Submitted</h2>
+        <p><strong>Report ID:</strong> ${data.reportId}</p>
+        <p><strong>Target Type:</strong> ${data.targetType}</p>
+        <p><strong>Reason:</strong> ${data.reason}</p>
+        <p><strong>Reporter Email:</strong> ${data.reporterEmail ?? "N/A"}</p>
+        <p><strong>Reported User Email:</strong> ${data.reportedUserEmail ?? "N/A"}</p>
+        <p><strong>Reported Listing ID:</strong> ${data.reportedListingId ?? "N/A"}</p>
+        <p><strong>Conversation ID:</strong> ${data.conversationId ?? "N/A"}</p>
+        <p><strong>Comments:</strong><br/>${data.comments || "No additional comments provided."}</p>
+      </div>
+    `,
+  });
+};
