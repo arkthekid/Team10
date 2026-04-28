@@ -96,6 +96,14 @@ export async function getListingById(id: string) {
   }
 }
 
+export async function getListingsByUserId(userId: string) {
+  const repo = AppDataSource.getRepository(Listing);
+
+  const listings = repo.findBy({ sellerId: userId });
+
+  return listings;
+}
+
 export async function updateListing(
   id: string,
   data: Partial<Listing>,

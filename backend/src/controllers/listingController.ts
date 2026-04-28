@@ -71,6 +71,19 @@ export const getListingById = async (req: Request<{ id: string }>, res: Response
   }
 };
 
+export const getListingsByUserId = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) throw new AppError("User Id is required", 400);
+
+    const listings = await listingService.getListingsByUserId(id);
+    return res.status(200).json(listings);
+  } catch (error) {
+    next(error);
+  }
+}
+
 
 export const updateListing = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   try {
