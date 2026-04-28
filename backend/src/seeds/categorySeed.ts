@@ -6,12 +6,14 @@ import { AppDataSource } from "../config/data-source";
 import { CategoryEntity } from "../entities/Category";
 
 const categories = [
-  "electronics",
-  "books",
-  "furniture",
-  "clothing",
-  "appliances",
-  "other",
+  "Electronic",
+  "Book",
+  "Furniture",
+  "Clothing",
+  "Appliance",
+  "Stationery",
+  "Transportation",
+  "Other",
 ];
 
 const seed = async () => {
@@ -21,8 +23,8 @@ const seed = async () => {
   for (const name of categories) {
     const existing = await repo.findOne({ where: { name } });
     if (!existing) {
-      const location = repo.create({ name });
-      await repo.save(location);
+      const category = repo.create({ name });
+      await repo.save(category);
       console.log(`✅ Added: ${name}`);
     } else {
       console.log(`⏭ Skipped (already exists): ${name}`);

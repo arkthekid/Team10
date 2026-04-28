@@ -63,7 +63,7 @@ export async function getListingById(id: string) {
 
   const listing = await repo.findOne({
     where: { listingId: id },
-    relations: ["seller"]
+    relations: ["seller", "categories", "images"]
   });
 
   if (!listing) throw new AppError("Listing not found", 404);
@@ -77,7 +77,7 @@ export async function getListingById(id: string) {
     name: listing.name,
     price: listing.price,
     condition: listing.condition,
-    categories: listing.categories,
+    categories: listing.categories.map(c => c.name),
     status: listing.status,
     description: listing.description,
     images: listing.images,
