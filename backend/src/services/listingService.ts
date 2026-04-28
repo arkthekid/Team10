@@ -4,12 +4,19 @@ import { Listing } from "../entities/Listing";
 import { User } from "../entities/User";
 import { GetListingDto } from "../dto/getListing.dto";
 import { Conversation } from "../entities/Conversation";
+import { CategoryEntity } from "../entities/Category";
 
-export async function createListing(data: Partial<Listing>, userId: string) {
+export async function createListing(data: Partial<Listing>, categoriesIDs: string[], userId: string) {
   const listingRepository = AppDataSource.getRepository(Listing);
+  const categoryRepository = AppDataSource.getRepository(CategoryEntity);
+
+  const categories = await categoryRepository.findBy(
+    categoriesIDs.map(id => ({ categoryId: id }))
+  );
 
   const listing = listingRepository.create(data);
   listing.sellerId = userId;
+  listing.categories = categories;
 
   return await listingRepository.save(listing);
 }
@@ -89,6 +96,14 @@ export async function getListingById(id: string) {
   }
 }
 
+export async function getListingsByUserId(userId: string) {
+  const repo = AppDataSource.getRepository(Listing);
+
+  const listings = repo.findBy({ sellerId: userId });
+
+  return listings;
+}
+
 export async function updateListing(
   id: string,
   data: Partial<Listing>,
@@ -134,4 +149,13 @@ export async function getMyListings(userId: string) {
   return await repo.find({
     where: { sellerId: userId },
   });
+}
+
+export async function getMyOrders(userId: string) { // just filtered listing
+  const repo = AppDataSource.getRepository(Listing);
+
+  return await repo.find({
+    where: { buyerId: userId },
+    relations: ["seller", "images"]
+  })
 }
