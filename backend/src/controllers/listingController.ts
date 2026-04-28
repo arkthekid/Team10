@@ -136,3 +136,15 @@ export const getMyListings = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+export const getMyOrders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = getUserId(req);
+
+    const orders = await listingService.getMyOrders(userId);
+
+    res.status(200).json(orders);
+  } catch (error) {
+    next(error);
+  }
+}

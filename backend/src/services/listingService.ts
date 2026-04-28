@@ -150,3 +150,12 @@ export async function getMyListings(userId: string) {
     where: { sellerId: userId },
   });
 }
+
+export async function getMyOrders(userId: string) { // just filtered listing
+  const repo = AppDataSource.getRepository(Listing);
+
+  return await repo.find({
+    where: { buyerId: userId },
+    relations: ["seller", "images"]
+  })
+}
