@@ -111,6 +111,8 @@ export async function getListingStatus(listingId: string) {
     sellerMarkedSoldAt: listing.sellerMarkedSoldAt,
     buyerMarkedReceivedAt: listing.buyerMarkedReceivedAt,
   };
+};
+
 export async function getListingsByUserId(userId: string) {
   const repo = AppDataSource.getRepository(Listing);
 
