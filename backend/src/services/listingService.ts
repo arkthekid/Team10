@@ -90,6 +90,7 @@ export async function getListingById(id: string) {
     images: listing.images,
     ownerId: listing.sellerId,
     sellerName: listing.seller.name,
+    createdAt: listing.createdAt,
     updatedAt: listing.updatedAt,
     pickUpLocation: listing.pickUpLocation,
     cntInterestedUser: cntConversation,
