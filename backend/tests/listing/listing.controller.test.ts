@@ -53,6 +53,7 @@ describe("listingController", () => {
       expect(getUserId).toHaveBeenCalledWith(req);
       expect(listingService.createListing).toHaveBeenCalledWith(
         req.body,
+        undefined,
         "user123",
       );
       expect(res.status).toHaveBeenCalledWith(201);
