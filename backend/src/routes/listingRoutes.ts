@@ -10,8 +10,9 @@ router.get("/", listingController.getListings);
 router.get("/me", protect, listingController.getMyListings);
 router.get("/:id", listingController.getListingById);
 router.get("/:id/status", listingController.getListingStatus);
+router.get("/user/:userId", listingController.getListingsByUserId);
+router.get("/orders/me", protect, listingController.getMyOrders);
 
-// protected writes
 router.post("/", protect, listingController.createListing);
 router.patch("/:id", protect, listingController.updateListing);
 router.delete("/:id", protect, listingController.deleteListing);

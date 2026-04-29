@@ -7,8 +7,9 @@ import { GetListingDto } from "../dto/getListing.dto";
 export const createListing = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = getUserId(req);
+    const { categoryIds, ...data } = req.body;
 
-    const newListing = await listingService.createListing(req.body, userId);
+    const newListing = await listingService.createListing(req.body, categoryIds, userId);
 
     res.status(201).json(newListing);
   } catch (error) {
@@ -83,6 +84,18 @@ export const getListingStatus = async (
     next(error);
   }
 };
+export const getListingsByUserId = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) throw new AppError("User Id is required", 400);
+
+    const listings = await listingService.getListingsByUserId(id);
+    return res.status(200).json(listings);
+  } catch (error) {
+    next(error);
+  }
+}
 
 
 export const updateListing = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
@@ -136,3 +149,15 @@ export const getMyListings = async (req: Request, res: Response, next: NextFunct
     next(error);
   }
 };
+
+export const getMyOrders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = getUserId(req);
+
+    const orders = await listingService.getMyOrders(userId);
+
+    res.status(200).json(orders);
+  } catch (error) {
+    next(error);
+  }
+}

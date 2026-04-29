@@ -7,23 +7,227 @@ import {
   ShieldX,
   Trash2,
   Heart,
+  Pencil,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
+import SafetyNotice from "@/components/SafetyNotice";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { getListingById, deleteListing } from "../lib/listingApi";
+import {
+  getListingById,
+  deleteListing,
+  getMyListings,
+} from "../lib/listingApi";
 import { blockUser } from "../lib/blockApi";
+import { getCurrentUser } from "../lib/authApi";
 import {
   addFavorite,
   getMyFavorites,
   removeFavorite,
 } from "../lib/favoriteApi";
 
+const fallbackImage =
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
+
+const formatCategory = (value: any) => {
+  if (!value) return "General";
+
+  if (typeof value === "object") {
+    const nestedValue =
+      value.name || value.label || value.value || value.category || "General";
+
+    return formatCategory(nestedValue);
+  }
+
+  return String(value)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const getListingId = (listing: any) => {
+  return String(
+    listing?.listingId ||
+      listing?.id ||
+      listing?.productId ||
+      listing?._id ||
+      listing?.listing?.listingId ||
+      listing?.listing?.id ||
+      ""
+  );
+};
+
+const getListingImages = (listing: any) => {
+  const uploadedImages = Array.isArray(listing.images)
+    ? listing.images
+        .map((image: any) => {
+          if (typeof image === "string") return image;
+
+          return (
+            image?.url ||
+            image?.imageUrl ||
+            image?.publicUrl ||
+            image?.src ||
+            ""
+          );
+        })
+        .filter(Boolean)
+    : [];
+
+  const singleImages = [
+    listing.imageUrl,
+    listing.image,
+    listing.photoUrl,
+    listing.photo,
+    listing.listingImage,
+  ].filter(Boolean);
+
+  const allImages = [...uploadedImages, ...singleImages];
+
+  const uniqueImages = Array.from(new Set(allImages));
+
+  return uniqueImages.length > 0 ? uniqueImages : [fallbackImage];
+};
+
+const formatDate = (value: any) => {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Not available";
+  }
+
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
+
+const getUserFromResponse = (data: any) => {
+  return data?.user || data?.data?.user || data?.data || data || {};
+};
+
+const getUserId = (userData: any) => {
+  const user = getUserFromResponse(userData);
+
+  return String(
+    user?.id ||
+      user?.userId ||
+      user?._id ||
+      user?.sub ||
+      user?.user?.id ||
+      user?.user?.userId ||
+      ""
+  );
+};
+
+const getUserEmail = (userData: any) => {
+  const user = getUserFromResponse(userData);
+
+  return String(
+    user?.umassEmail ||
+      user?.email ||
+      user?.user?.umassEmail ||
+      user?.user?.email ||
+      ""
+  ).toLowerCase();
+};
+
+const getUserName = (userData: any) => {
+  const user = getUserFromResponse(userData);
+
+  return String(
+    user?.name ||
+      user?.fullName ||
+      user?.displayName ||
+      user?.user?.name ||
+      user?.user?.fullName ||
+      user?.user?.displayName ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+};
+
+const getSellerId = (listing: any) => {
+  return String(
+    listing?.sellerId ||
+      listing?.sellerID ||
+      listing?.seller_id ||
+      listing?.seller?.id ||
+      listing?.seller?.userId ||
+      listing?.seller?.sellerId ||
+      listing?.seller?._id ||
+      listing?.userId ||
+      listing?.user_id ||
+      listing?.ownerId ||
+      listing?.owner_id ||
+      listing?.createdById ||
+      listing?.created_by ||
+      listing?.user?.id ||
+      listing?.user?.userId ||
+      listing?.user?._id ||
+      ""
+  );
+};
+
+const getSellerEmail = (listing: any) => {
+  return String(
+    listing?.sellerEmail ||
+      listing?.seller?.umassEmail ||
+      listing?.seller?.email ||
+      listing?.user?.umassEmail ||
+      listing?.user?.email ||
+      ""
+  ).toLowerCase();
+};
+
+const getSellerName = (listing: any) => {
+  return String(
+    listing?.sellerName ||
+      listing?.nameOfSeller ||
+      listing?.seller?.name ||
+      listing?.seller?.fullName ||
+      listing?.seller?.displayName ||
+      listing?.user?.name ||
+      listing?.user?.fullName ||
+      listing?.user?.displayName ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+};
+
+const decodeJwtPayload = () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return null;
+
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(normalizedPayload));
+  } catch {
+    return null;
+  }
+};
+
 const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [listing, setListing] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isMyListing, setIsMyListing] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
   const [blocking, setBlocking] = useState(false);
@@ -31,6 +235,8 @@ const ListingDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showSafetyNotice, setShowSafetyNotice] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,8 +246,30 @@ const ListingDetail = () => {
       try {
         setLoading(true);
         setError("");
-        const data = await getListingById(id);
-        setListing(data.listing || data);
+        setCurrentImageIndex(0);
+
+        const listingData = await getListingById(id);
+        const loadedListing = listingData.listing || listingData;
+
+        const userData = await getCurrentUser().catch(() => null);
+        const jwtUser = decodeJwtPayload();
+
+        const myListingsData = await getMyListings().catch(() => []);
+        const myListings = Array.isArray(myListingsData)
+          ? myListingsData
+          : Array.isArray(myListingsData.listings)
+          ? myListingsData.listings
+          : [];
+
+        const currentListingId = getListingId(loadedListing);
+
+        const foundInMyListings = myListings.some((myListing: any) => {
+          return getListingId(myListing) === currentListingId;
+        });
+
+        setListing(loadedListing);
+        setCurrentUser(userData || jwtUser);
+        setIsMyListing(foundInMyListings);
       } catch (err: any) {
         setError(err.message || "Listing not found");
       } finally {
@@ -67,7 +295,13 @@ const ListingDetail = () => {
 
         const found = favorites.some((fav: any) => {
           const favoriteId =
-            fav.listingId || fav.id || fav.productId || fav._id;
+            fav.listingId ||
+            fav.id ||
+            fav.productId ||
+            fav._id ||
+            fav.listing?.listingId ||
+            fav.listing?.id;
+
           return String(favoriteId) === String(id);
         });
 
@@ -91,75 +325,6 @@ const ListingDetail = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleDelete = async () => {
-    if (!id) return;
-
-    const confirmed = window.confirm("Are you sure you want to delete this listing?");
-    if (!confirmed) return;
-
-    try {
-      setDeleting(true);
-      await deleteListing(id);
-      toast.success("Listing deleted successfully");
-      navigate("/browse");
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete listing");
-    } finally {
-      setDeleting(false);
-      setMenuOpen(false);
-    }
-  };
-
-  const handleBlockSeller = async () => {
-    console.log("listing object:", listing);
-    console.log("sellerId:", listing?.sellerId);
-
-    if (!listing?.sellerId) {
-      toast.error("Seller information not found");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Are you sure you want to block this seller?"
-    );
-    if (!confirmed) return;
-
-    try {
-      setBlocking(true);
-      await blockUser(listing.sellerId);
-      toast.success("Seller blocked successfully");
-      navigate("/browse");
-    } catch (err: any) {
-      console.error("block seller error:", err);
-      toast.error(err.message || "Failed to block seller");
-    } finally {
-      setBlocking(false);
-      setMenuOpen(false);
-    }
-  };
-
-  const handleFavoriteToggle = async () => {
-    if (!id || favoriteLoading) return;
-
-    try {
-      setFavoriteLoading(true);
-
-      if (isFavorited) {
-        await removeFavorite(id);
-        setIsFavorited(false);
-        toast.success("Removed from favorites");
-      } else {
-        await addFavorite(id);
-        setIsFavorited(true);
-        toast.success("Added to favorites");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update favorite");
-    } finally {
-      setFavoriteLoading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -182,21 +347,208 @@ const ListingDetail = () => {
     );
   }
 
+  const sellerId = getSellerId(listing);
+  const currentUserId = getUserId(currentUser);
+
+  const sellerEmail = getSellerEmail(listing);
+  const currentUserEmail = getUserEmail(currentUser);
+
+  const sellerNameForCheck = getSellerName(listing);
+  const currentUserName = getUserName(currentUser);
+
+  const tokenPayload = decodeJwtPayload();
+
+  const tokenUserId = String(
+    tokenPayload?.id ||
+      tokenPayload?.userId ||
+      tokenPayload?.sub ||
+      tokenPayload?.user?.id ||
+      tokenPayload?.user?.userId ||
+      ""
+  );
+
+  const tokenEmail = String(
+    tokenPayload?.umassEmail ||
+      tokenPayload?.email ||
+      tokenPayload?.user?.umassEmail ||
+      tokenPayload?.user?.email ||
+      ""
+  ).toLowerCase();
+
+  const tokenName = String(
+    tokenPayload?.name ||
+      tokenPayload?.fullName ||
+      tokenPayload?.displayName ||
+      tokenPayload?.user?.name ||
+      tokenPayload?.user?.fullName ||
+      tokenPayload?.user?.displayName ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+
+  const isOwnListing =
+    isMyListing ||
+    (sellerId && currentUserId && sellerId === currentUserId) ||
+    (sellerId && tokenUserId && sellerId === tokenUserId) ||
+    (sellerEmail && currentUserEmail && sellerEmail === currentUserEmail) ||
+    (sellerEmail && tokenEmail && sellerEmail === tokenEmail) ||
+    (sellerNameForCheck &&
+      currentUserName &&
+      sellerNameForCheck === currentUserName) ||
+    (sellerNameForCheck && tokenName && sellerNameForCheck === tokenName);
+
+  const handleDelete = async () => {
+    if (!id) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this listing?"
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      console.log("Deleting listing:", id);
+
+      await deleteListing(id);
+
+      toast.success("Listing deleted successfully");
+      setMenuOpen(false);
+      navigate("/browse");
+    } catch (err: any) {
+      console.error("DELETE LISTING ERROR:", err);
+      toast.error(err.message || "Failed to delete listing");
+    } finally {
+      setDeleting(false);
+      setMenuOpen(false);
+    }
+  };
+
+  const handleBlockSeller = async () => {
+    if (isOwnListing) {
+      toast.error("You cannot block yourself");
+      setMenuOpen(false);
+      return;
+    }
+
+    const sellerIdToBlock = getSellerId(listing);
+
+    if (!sellerIdToBlock) {
+      toast.error("Seller information not found");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to block this seller?"
+    );
+    if (!confirmed) return;
+
+    try {
+      setBlocking(true);
+      await blockUser(sellerIdToBlock);
+
+      toast.success("Seller blocked successfully");
+      setMenuOpen(false);
+      navigate("/browse");
+    } catch (err: any) {
+      console.error("BLOCK SELLER ERROR:", err);
+      toast.error(err.message || "Failed to block seller");
+    } finally {
+      setBlocking(false);
+    }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (isOwnListing) {
+      toast.error("You cannot favorite your own listing");
+      return;
+    }
+
+    if (!id || favoriteLoading) return;
+
+    try {
+      setFavoriteLoading(true);
+
+      if (isFavorited) {
+        await removeFavorite(id);
+        setIsFavorited(false);
+        toast.success("Removed from favorites");
+      } else {
+        await addFavorite(id);
+        setIsFavorited(true);
+        toast.success("Added to favorites");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update favorite");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  const handleMessageSeller = () => {
+    if (isOwnListing) return;
+    setShowSafetyNotice(true);
+  };
+
+  const handleSafetyProceed = () => {
+    setShowSafetyNotice(false);
+    navigate(`/messages?listingId=${id}`);
+  };
+
+  const handleEditListing = () => {
+    if (!id) return;
+    setMenuOpen(false);
+    navigate(`/listing/${id}/edit`);
+  };
+
+  const images = getListingImages(listing);
+  const currentImage = images[currentImageIndex] || fallbackImage;
+  const hasMultipleImages = images.length > 1;
+
+  const showPreviousImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === 0 ? images.length - 1 : prev - 1
+    );
+  };
+
+  const showNextImage = () => {
+    setCurrentImageIndex((prev) =>
+      prev === images.length - 1 ? 0 : prev + 1
+    );
+  };
+
   const title = listing.name || listing.title || "Untitled Listing";
+
   const price =
     listing.price === null || listing.price === undefined
       ? null
       : Number(listing.price);
 
-  const image =
-    listing.imageUrl ||
-    listing.image ||
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
-
-  const location = listing.pickUpLocation || listing.location || "Amherst, MA";
+  const location = listing.pickUpLocation || listing.location || "Not provided";
   const description = listing.description || "No description provided.";
-  const category = listing.category || "General";
-  const sellerName = listing.sellerName || listing.nameOfSeller || "Seller";
+
+  const rawCategory =
+    listing.category ||
+    listing.categoryName ||
+    listing.categoryType ||
+    listing.listingCategory ||
+    listing.type ||
+    listing.itemCategory ||
+    listing.productCategory ||
+    "General";
+
+  const category = formatCategory(rawCategory);
+  const condition = listing.condition || "Not provided";
+
+  const sellerName =
+    listing.sellerName ||
+    listing.nameOfSeller ||
+    listing.seller?.name ||
+    listing.user?.name ||
+    "Seller";
+
+  const createdAt = listing.createdAt || listing.created_at;
+  const updatedAt = listing.updatedAt || listing.updated_at;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -214,20 +566,28 @@ const ListingDetail = () => {
           </button>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleFavoriteToggle}
-              disabled={favoriteLoading}
-              className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
-              aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
-              title={isFavorited ? "Remove from favorites" : "Add to favorites"}
-            >
-              <Heart
-                className={`w-6 h-6 transition-colors ${
-                  isFavorited ? "fill-red-500 text-red-500" : "text-foreground"
-                }`}
-              />
-            </button>
+            {!isOwnListing && (
+              <button
+                type="button"
+                onClick={handleFavoriteToggle}
+                disabled={favoriteLoading}
+                className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
+                aria-label={
+                  isFavorited ? "Remove from favorites" : "Add to favorites"
+                }
+                title={
+                  isFavorited ? "Remove from favorites" : "Add to favorites"
+                }
+              >
+                <Heart
+                  className={`w-6 h-6 transition-colors ${
+                    isFavorited
+                      ? "fill-red-500 text-red-500"
+                      : "text-foreground"
+                  }`}
+                />
+              </button>
+            )}
 
             <div className="relative" ref={menuRef}>
               <button
@@ -240,37 +600,54 @@ const ListingDetail = () => {
 
               {menuOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-card border rounded-xl shadow-lg p-2 z-20">
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      toast.info("Report feature coming soon");
-                    }}
-                  >
-                    <Flag className="w-5 h-5" />
-                    <span>Report Listing</span>
-                  </button>
+                  {isOwnListing ? (
+                    <>
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
+                        onClick={handleEditListing}
+                      >
+                        <Pencil className="w-5 h-5" />
+                        <span>Edit Listing</span>
+                      </button>
 
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left disabled:opacity-60"
-                    onClick={handleBlockSeller}
-                    disabled={blocking}
-                  >
-                    <ShieldX className="w-5 h-5" />
-                    <span>{blocking ? "Blocking..." : "Block Seller"}</span>
-                  </button>
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600 disabled:opacity-60"
+                        onClick={handleDelete}
+                        disabled={deleting}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                        <span>
+                          {deleting ? "Deleting..." : "Delete Listing"}
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          toast.info("Report feature coming soon");
+                        }}
+                      >
+                        <Flag className="w-5 h-5" />
+                        <span>Report Listing</span>
+                      </button>
 
-                  <button
-                    type="button"
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left text-red-600"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    <span>{deleting ? "Deleting..." : "Delete Listing"}</span>
-                  </button>
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left disabled:opacity-60"
+                        onClick={handleBlockSeller}
+                        disabled={blocking}
+                      >
+                        <ShieldX className="w-5 h-5" />
+                        <span>{blocking ? "Blocking..." : "Block Seller"}</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -278,34 +655,114 @@ const ListingDetail = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 items-start">
-          <div className="rounded-2xl overflow-hidden border bg-card">
+          <div className="relative rounded-2xl overflow-hidden border bg-card">
             <img
-              src={image}
+              src={currentImage}
               alt={title}
               className="w-full aspect-square object-cover"
+              onError={(e) => {
+                e.currentTarget.src = fallbackImage;
+              }}
             />
+
+            {hasMultipleImages && (
+              <>
+                <button
+                  type="button"
+                  onClick={showPreviousImage}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-full p-2 shadow-md"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={showNextImage}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-full p-2 shadow-md"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+
+                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-background/85 rounded-full px-3 py-1 text-sm font-medium">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
           </div>
 
           <div>
             <h1 className="text-4xl font-bold mb-2">{title}</h1>
 
             <p className="text-2xl font-bold text-primary mb-6">
-              {price === null ? "FREE" : `$${price.toLocaleString()}`}
+              {price === null || Number(price) === 0
+                ? "FREE"
+                : `$${price.toLocaleString(undefined, {
+                    minimumFractionDigits: price % 1 === 0 ? 0 : 2,
+                    maximumFractionDigits: 2,
+                  })}`}
             </p>
 
-            <p className="text-muted-foreground mb-2">{location}</p>
-            <p className="text-muted-foreground mb-2">Posted by {sellerName}</p>
+            <div className="space-y-3 text-base mb-6">
+              <p>
+                <span className="font-semibold">Pick-up Location: </span>
+                <span className="text-muted-foreground">{location}</span>
+              </p>
 
-            <div className="inline-block px-3 py-1 rounded-md bg-muted text-sm mb-6">
-              {category}
+              <p>
+                <span className="font-semibold">Posted by: </span>
+                <span className="text-muted-foreground">{sellerName}</span>
+              </p>
+
+              <p>
+                <span className="font-semibold">Category: </span>
+                <span className="inline-block px-3 py-1 rounded-md bg-muted text-sm">
+                  {category}
+                </span>
+              </p>
+
+              <p>
+                <span className="font-semibold">Condition: </span>
+                <span className="text-muted-foreground">{condition}</span>
+              </p>
+
+              <p>
+                <span className="font-semibold">Created: </span>
+                <span className="text-muted-foreground">
+                  {formatDate(createdAt)}
+                </span>
+              </p>
+
+              <p>
+                <span className="font-semibold">Last updated: </span>
+                <span className="text-muted-foreground">
+                  {formatDate(updatedAt)}
+                </span>
+              </p>
+
+              <div>
+                <p className="font-semibold mb-1">Description:</p>
+                <p className="text-lg leading-8">{description}</p>
+              </div>
             </div>
 
-            <p className="text-lg leading-8 mb-10">{description}</p>
-
-            <Button className="w-full h-14 text-lg">Message Seller</Button>
+            <Button
+              onClick={handleMessageSeller}
+              disabled={isOwnListing}
+              className="w-full h-14 text-lg"
+            >
+              {isOwnListing ? "Your Listing" : "Message Seller"}
+            </Button>
           </div>
         </div>
       </main>
+
+      <SafetyNotice
+        open={showSafetyNotice}
+        onClose={() => setShowSafetyNotice(false)}
+        onProceed={handleSafetyProceed}
+      />
     </div>
   );
 };

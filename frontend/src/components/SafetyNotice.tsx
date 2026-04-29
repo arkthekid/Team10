@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,40 +8,65 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle } from "lucide-react";
-import { useState } from "react";
 
 interface SafetyNoticeProps {
   open: boolean;
-  onAccept: () => void;
+  onClose: () => void;
+  onProceed: () => void;
 }
 
-const SafetyNotice = ({ open, onAccept }: SafetyNoticeProps) => {
+const SafetyNotice = ({ open, onClose, onProceed }: SafetyNoticeProps) => {
   const [agreed, setAgreed] = useState(false);
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      setAgreed(false);
+      onClose();
+    }
+  };
+
+  const handleProceed = () => {
+    if (!agreed) return;
+    setAgreed(false);
+    onProceed();
+  };
+
   return (
-    <Dialog open={open}>
-      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-destructive" />
+          <DialogTitle className="flex items-center gap-3 text-2xl">
+            <AlertTriangle className="w-7 h-7 text-destructive" />
             Safety Notice
           </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          If a listing seems illegal or suspicious, don't engage: report and block. For
-          pickups, meet only in a public, well-lit spot (ideally on campus).
+
+        <p className="text-base text-muted-foreground leading-relaxed">
+          If a listing seems illegal or suspicious, don't engage: report and
+          block. For pickups, meet only in a public, well-lit spot, ideally on
+          campus.
         </p>
-        <div className="flex items-center gap-2 mt-2">
+
+        <div className="flex items-center gap-3 mt-3">
           <Checkbox
             id="understand"
             checked={agreed}
             onCheckedChange={(checked) => setAgreed(checked === true)}
           />
-          <label htmlFor="understand" className="text-sm font-medium cursor-pointer">
+
+          <label
+            htmlFor="understand"
+            className="text-base font-medium cursor-pointer"
+          >
             I understand
           </label>
         </div>
-        <Button disabled={!agreed} onClick={onAccept} className="mt-2">
+
+        <Button
+          disabled={!agreed}
+          onClick={handleProceed}
+          className="mt-4 w-full h-12 text-base"
+        >
           Proceed
         </Button>
       </DialogContent>

@@ -36,9 +36,6 @@ export class Listing {
   @Column("text")
   condition!: string;
 
-  @Column("text")
-  category!: Category;
-
   @Column({ type: "text", default: "available" })
   status!: ListingStatus;
 
@@ -76,7 +73,7 @@ export class Listing {
 
   @ManyToMany(() => CategoryEntity, (category) => category.listings)
   @JoinTable()
-  categories!: Category[];
+  categories!: CategoryEntity[];
 
   @OneToMany(() => ListingImage, (images) => images.listing, { cascade: true, eager: true })
   images!: ListingImage[];

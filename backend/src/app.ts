@@ -6,6 +6,8 @@ import conversationRoutes from "./routes/conversationRoutes";
 import messageRoutes from "./routes/messageRoutes";
 import favoriteRoutes from "./routes/favoriteRoutes";
 import blockRoutes from "./routes/blockRoutes";
+import reportRoutes from "./routes/reportRoutes";
+import categoryRoutes from "./routes/categoryRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import pickUpLocationRoutes from "./routes/pickUpLocationRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
@@ -30,9 +32,12 @@ export function createApp() {
   app.use("/api/messages", messageRoutes);
   app.use("/api/favorites", favoriteRoutes);
   app.use("/api/blocks", blockRoutes);
+  app.use("/api/reports", reportRoutes);
   app.use("/api/pick-up-locations", pickUpLocationRoutes);
   app.use("/api/reviews", reviewRoutes);
   
+  app.use("/api/categories", categoryRoutes);
+
   app.use(errorHandler);
 
   return app;

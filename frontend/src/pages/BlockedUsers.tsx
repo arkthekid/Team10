@@ -6,52 +6,104 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { getBlockedUsers, unblockUser } from "@/lib/blockApi";
 
+const normalizeBlockedList = (data: any) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.blocks)) return data.blocks;
+  if (Array.isArray(data.blockedUsers)) return data.blockedUsers;
+  if (Array.isArray(data.users)) return data.users;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+};
+
+const getBlockedUser = (item: any) => {
+  return (
+    item.blocked ||
+    item.blockedUser ||
+    item.blockedUserInfo ||
+    item.user ||
+    item.seller ||
+    {}
+  );
+};
+
+const getBlockedUserId = (item: any) => {
+  const user = getBlockedUser(item);
+
+  return String(
+    item?.blockedId ||
+      item?.blockedUserId ||
+      user?.id ||
+      user?.userId ||
+      user?._id ||
+      item?.blocked?.id ||
+      item?.blocked?.userId ||
+      item?.blockedUser?.id ||
+      item?.blockedUser?.userId ||
+      item?.blockedUserInfo?.id ||
+      item?.blockedUserInfo?.userId ||
+      item?.seller?.id ||
+      item?.seller?.userId ||
+      ""
+  );
+};
+
 const BlockedUsers = () => {
   const navigate = useNavigate();
+
   const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [unblockingId, setUnblockingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function loadBlockedUsers() {
-      try {
-        setLoading(true);
-        setError("");
+  const loadBlockedUsers = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-        const data = await getBlockedUsers();
+      const data = await getBlockedUsers();
+      console.log("BLOCKED USERS RESPONSE:", data);
 
-        const normalized = Array.isArray(data)
-          ? data
-          : Array.isArray(data.blocks)
-          ? data.blocks
-          : [];
-
-        setBlockedUsers(normalized);
-      } catch (err: any) {
-        setError(err.message || "Failed to load blocked users");
-      } finally {
-        setLoading(false);
-      }
+      const normalized = normalizeBlockedList(data);
+      setBlockedUsers(normalized);
+    } catch (err: any) {
+      console.error("LOAD BLOCKED USERS ERROR:", err);
+      setError(err.message || "Failed to load blocked users");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadBlockedUsers();
   }, []);
 
   const handleUnblock = async (userId: string) => {
-    const confirmed = window.confirm("Are you sure you want to unblock this seller?");
+    if (!userId) {
+      toast.error("Blocked seller id not found");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to unblock this seller?"
+    );
     if (!confirmed) return;
 
     try {
       setUnblockingId(userId);
+
+      console.log("UNBLOCK USER ID:", userId);
+
       await unblockUser(userId);
 
+      toast.success("Seller unblocked successfully");
+
       setBlockedUsers((prev) =>
-        prev.filter((item) => String(item?.user?.id) !== String(userId))
+        prev.filter((item) => getBlockedUserId(item) !== userId)
       );
 
-      toast.success("Seller unblocked successfully");
+      await loadBlockedUsers();
     } catch (err: any) {
+      console.error("UNBLOCK ERROR:", err);
       toast.error(err.message || "Failed to unblock seller");
     } finally {
       setUnblockingId(null);
@@ -83,36 +135,41 @@ const BlockedUsers = () => {
         {error && <p className="text-red-500">{error}</p>}
 
         {!loading && !error && blockedUsers.length === 0 && (
-          <p className="text-muted-foreground">You have not blocked any sellers.</p>
+          <p className="text-muted-foreground">
+            You have not blocked any sellers.
+          </p>
         )}
 
         {!loading && !error && blockedUsers.length > 0 && (
           <div className="space-y-4">
             {blockedUsers.map((item) => {
-              const user = item.user || {};
-              const userId = String(user.id || "");
+              const user = getBlockedUser(item);
+              const userId = getBlockedUserId(item);
 
               return (
                 <div
-                  key={item.id || userId}
+                  key={item.id || item.blockId || userId}
                   className="border rounded-2xl p-4 bg-card flex items-center justify-between gap-4"
                 >
                   <div>
                     <p className="text-lg font-semibold">
-                      {user.name || "Unknown User"}
+                      {user.name ||
+                        user.fullName ||
+                        user.displayName ||
+                        user.umassEmail ||
+                        user.email ||
+                        "Unknown User"}
                     </p>
+
                     <p className="text-sm text-muted-foreground">
-                      {user.umassEmail || "No email available"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Role: {user.role || "User"}
+                      {user.umassEmail || user.email || "No email available"}
                     </p>
                   </div>
 
                   <Button
                     variant="outline"
                     onClick={() => handleUnblock(userId)}
-                    disabled={unblockingId === userId}
+                    disabled={!userId || unblockingId === userId}
                   >
                     {unblockingId === userId ? "Unblocking..." : "Unblock"}
                   </Button>
