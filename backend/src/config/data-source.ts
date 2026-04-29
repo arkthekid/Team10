@@ -5,6 +5,7 @@ import { ListingImage } from "../entities/ListingImage";
 import { User } from "../entities/User";
 import { Favorite } from "../entities/Favorite";
 import { Block } from "../entities/Block";
+import { Report } from "../entities/Report";
 import { Conversation } from "../entities/Conversation";
 import { Message } from "../entities/Message";
 import { CategoryEntity } from "../entities/Category";
@@ -21,6 +22,6 @@ export const AppDataSource = new DataSource({
   synchronize: true,
   logging: false,
 
-  entities: [Listing, ListingImage, User, Favorite, Block, Conversation, Message, CategoryEntity, pickUpLocation],
+  entities: [Listing, ListingImage, User, Favorite, Block, Report, Conversation, Message, CategoryEntity, pickUpLocation],
 
 });
