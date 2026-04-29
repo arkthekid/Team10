@@ -6,6 +6,7 @@ import {
   updateListing,
   deleteListing,
   getMyListings,
+  getListingStatus,
 } from "../../src/controllers/listingController";
 import * as listingService from "../../src/services/listingService";
 import { getUserId } from "../../src/utils/getUserId";
@@ -43,12 +44,18 @@ describe("listingController", () => {
 
       (getUserId as jest.Mock).mockReturnValue("user123");
       const mockListing = { listingId: "1", name: "Desk", price: 120 };
-      (listingService.createListing as jest.Mock).mockResolvedValue(mockListing);
+      (listingService.createListing as jest.Mock).mockResolvedValue(
+        mockListing,
+      );
 
       await createListing(req as Request, res as Response, next);
 
       expect(getUserId).toHaveBeenCalledWith(req);
-      expect(listingService.createListing).toHaveBeenCalledWith(req.body, "user123");
+      expect(listingService.createListing).toHaveBeenCalledWith(
+        req.body,
+        undefined,
+        "user123",
+      );
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(mockListing);
     });
@@ -226,9 +233,15 @@ describe("listingController", () => {
       req.params = { id: "listing-1" };
 
       const mockListing = { listingId: "listing-1", name: "Desk" };
-      (listingService.getListingById as jest.Mock).mockResolvedValue(mockListing);
+      (listingService.getListingById as jest.Mock).mockResolvedValue(
+        mockListing,
+      );
 
-      await getListingById(req as Request<{ id: string }>, res as Response, next);
+      await getListingById(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(listingService.getListingById).toHaveBeenCalledWith("listing-1");
       expect(res.status).toHaveBeenCalledWith(200);
@@ -238,7 +251,11 @@ describe("listingController", () => {
     it("should call next with AppError when id is missing", async () => {
       req.params = {} as any;
 
-      await getListingById(req as Request<{ id: string }>, res as Response, next);
+      await getListingById(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(expect.any(AppError));
       expect(listingService.getListingById).not.toHaveBeenCalled();
@@ -250,7 +267,11 @@ describe("listingController", () => {
       const error = new Error("Listing not found");
       (listingService.getListingById as jest.Mock).mockRejectedValue(error);
 
-      await getListingById(req as Request<{ id: string }>, res as Response, next);
+      await getListingById(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -258,7 +279,11 @@ describe("listingController", () => {
     it("should not send response when id is missing", async () => {
       req.params = {} as any;
 
-      await getListingById(req as Request<{ id: string }>, res as Response, next);
+      await getListingById(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(expect.any(AppError));
       expect(res.status).not.toHaveBeenCalled();
@@ -280,15 +305,21 @@ describe("listingController", () => {
         name: "Updated Desk",
       };
 
-      (listingService.updateListing as jest.Mock).mockResolvedValue(updatedListing);
+      (listingService.updateListing as jest.Mock).mockResolvedValue(
+        updatedListing,
+      );
 
-      await updateListing(req as Request<{ id: string }>, res as Response, next);
+      await updateListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(getUserId).toHaveBeenCalledWith(req);
       expect(listingService.updateListing).toHaveBeenCalledWith(
         "listing-1",
         req.body,
-        "user123"
+        "user123",
       );
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(updatedListing);
@@ -298,7 +329,11 @@ describe("listingController", () => {
       req.params = {} as any;
       req.body = { name: "Updated Desk" };
 
-      await updateListing(req as Request<{ id: string }>, res as Response, next);
+      await updateListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(expect.any(AppError));
       expect(listingService.updateListing).not.toHaveBeenCalled();
@@ -312,7 +347,11 @@ describe("listingController", () => {
       const error = new Error("Unauthorized");
       (listingService.updateListing as jest.Mock).mockRejectedValue(error);
 
-      await updateListing(req as Request<{ id: string }>, res as Response, next);
+      await updateListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -321,7 +360,11 @@ describe("listingController", () => {
       req.params = {} as any;
       req.body = { name: "Updated Desk" };
 
-      await updateListing(req as Request<{ id: string }>, res as Response, next);
+      await updateListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(getUserId).not.toHaveBeenCalled();
       expect(listingService.updateListing).not.toHaveBeenCalled();
@@ -336,7 +379,11 @@ describe("listingController", () => {
       const error = new Error("Unauthorized");
       (listingService.updateListing as jest.Mock).mockRejectedValue(error);
 
-      await updateListing(req as Request<{ id: string }>, res as Response, next);
+      await updateListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(error);
       expect(res.status).not.toHaveBeenCalled();
@@ -354,10 +401,17 @@ describe("listingController", () => {
         message: "Listing deleted successfully",
       });
 
-      await deleteListing(req as Request<{ id: string }>, res as Response, next);
+      await deleteListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(getUserId).toHaveBeenCalledWith(req);
-      expect(listingService.deleteListing).toHaveBeenCalledWith("listing-1", "user123");
+      expect(listingService.deleteListing).toHaveBeenCalledWith(
+        "listing-1",
+        "user123",
+      );
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
       expect(res.json).not.toHaveBeenCalled();
@@ -366,7 +420,11 @@ describe("listingController", () => {
     it("should call next with AppError when id is missing", async () => {
       req.params = {} as any;
 
-      await deleteListing(req as Request<{ id: string }>, res as Response, next);
+      await deleteListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(expect.any(AppError));
       expect(listingService.deleteListing).not.toHaveBeenCalled();
@@ -379,7 +437,11 @@ describe("listingController", () => {
       const error = new Error("Listing not found");
       (listingService.deleteListing as jest.Mock).mockRejectedValue(error);
 
-      await deleteListing(req as Request<{ id: string }>, res as Response, next);
+      await deleteListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(error);
     });
@@ -387,7 +449,11 @@ describe("listingController", () => {
     it("should not call getUserId when delete id is missing", async () => {
       req.params = {} as any;
 
-      await deleteListing(req as Request<{ id: string }>, res as Response, next);
+      await deleteListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(getUserId).not.toHaveBeenCalled();
       expect(listingService.deleteListing).not.toHaveBeenCalled();
@@ -401,7 +467,11 @@ describe("listingController", () => {
       const error = new Error("Listing not found");
       (listingService.deleteListing as jest.Mock).mockRejectedValue(error);
 
-      await deleteListing(req as Request<{ id: string }>, res as Response, next);
+      await deleteListing(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
 
       expect(next).toHaveBeenCalledWith(error);
       expect(res.status).not.toHaveBeenCalled();
@@ -419,7 +489,9 @@ describe("listingController", () => {
         { listingId: "2", sellerId: "user123", name: "Chair" },
       ];
 
-      (listingService.getMyListings as jest.Mock).mockResolvedValue(mockListings);
+      (listingService.getMyListings as jest.Mock).mockResolvedValue(
+        mockListings,
+      );
 
       await getMyListings(req as Request, res as Response, next);
 
@@ -474,6 +546,63 @@ describe("listingController", () => {
       expect(res.status).not.toHaveBeenCalled();
       expect(res.json).not.toHaveBeenCalled();
       expect(res.send).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getListingStatus", () => {
+    it("returns 200 and status on success", async () => {
+      req.params = { id: "listing-1" };
+
+      (listingService.getListingStatus as jest.Mock).mockResolvedValue({
+        listingId: "listing-1",
+        status: "available",
+        sellerMarkedSoldAt: null,
+        buyerMarkedReceivedAt: null,
+      });
+
+      await getListingStatus(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
+
+      expect(listingService.getListingStatus).toHaveBeenCalledWith("listing-1");
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "available" }),
+      );
+    });
+
+    it("calls next with 404 when listing not found", async () => {
+      req.params = { id: "bad-id" };
+
+      (listingService.getListingStatus as jest.Mock).mockRejectedValue(
+        new AppError("Listing not found", 404),
+      );
+
+      await getListingStatus(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
+
+      expect(next).toHaveBeenCalledWith(expect.any(AppError));
+    });
+
+    it("calls next with error when service throws", async () => {
+      req.params = { id: "listing-1" };
+
+      (listingService.getListingStatus as jest.Mock).mockRejectedValue(
+        new Error("DB error"),
+      );
+
+      await getListingStatus(
+        req as Request<{ id: string }>,
+        res as Response,
+        next,
+      );
+
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 });

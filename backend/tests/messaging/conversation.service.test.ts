@@ -108,21 +108,30 @@ describe("conversationService", () => {
   });
 
   describe("getMyConversations", () => {
-    // Success case
-    it("returns all conversations for a user", async () => {
+    it("returns all conversations with listingStatus for a user", async () => {
       const mockConversations = [
-        { id: "conv-1", buyerId: "user-1", sellerId: "seller-1" },
-        { id: "conv-2", buyerId: "buyer-2", sellerId: "user-1" },
+        {
+          id: "conv-1",
+          buyerId: "user-1",
+          sellerId: "seller-1",
+          listing: { status: "available" },
+        },
+        {
+          id: "conv-2",
+          buyerId: "buyer-2",
+          sellerId: "user-1",
+          listing: { status: "sold_pending" },
+        },
       ];
       mockConversationRepo.find.mockResolvedValue(mockConversations);
 
       const result = await conversationService.getMyConversations("user-1");
 
-      expect(result).toEqual(mockConversations);
+      expect(result[0]?.listingStatus).toBe("available");
+      expect(result[1]?.listingStatus).toBe("sold_pending");
       expect(mockConversationRepo.find).toHaveBeenCalled();
     });
 
-    // Edge case - no conversations
     it("returns empty array when user has no conversations", async () => {
       mockConversationRepo.find.mockResolvedValue([]);
 
@@ -131,7 +140,22 @@ describe("conversationService", () => {
       expect(result).toEqual([]);
     });
 
-    // Error case - repo fails
+    it("returns null listingStatus when listing is missing", async () => {
+      const mockConversations = [
+        {
+          id: "conv-1",
+          buyerId: "user-1",
+          sellerId: "seller-1",
+          listing: null,
+        },
+      ];
+      mockConversationRepo.find.mockResolvedValue(mockConversations);
+
+      const result = await conversationService.getMyConversations("user-1");
+
+      expect(result[0]?.listingStatus).toBeNull();
+    });
+
     it("throws if repository fails", async () => {
       mockConversationRepo.find.mockRejectedValue(new Error("DB error"));
 
@@ -196,6 +220,48 @@ describe("conversationService", () => {
       );
 
       expect(result).toEqual(mockConversation);
+    });
+  });
+
+  describe("getConversationStatus", () => {
+    it("returns conversation status for a member", async () => {
+      mockConversationRepo.findOne.mockResolvedValue({
+        conversationId: "conv-1",
+        buyerId: "buyer-1",
+        sellerId: "seller-1",
+        isArchived: false,
+        listing: { status: "available" },
+      });
+
+      const result = await conversationService.getConversationStatus(
+        "conv-1",
+        "buyer-1",
+      );
+
+      expect(result.listingStatus).toBe("available");
+      expect(result.conversationId).toBe("conv-1");
+    });
+
+    it("throws 404 if conversation not found", async () => {
+      mockConversationRepo.findOne.mockResolvedValue(null);
+
+      await expect(
+        conversationService.getConversationStatus("bad-conv", "buyer-1"),
+      ).rejects.toThrow("Conversation not found");
+    });
+
+    it("throws 403 if user is not a member", async () => {
+      mockConversationRepo.findOne.mockResolvedValue({
+        conversationId: "conv-1",
+        buyerId: "buyer-1",
+        sellerId: "seller-1",
+        isArchived: false,
+        listing: { status: "available" },
+      });
+
+      await expect(
+        conversationService.getConversationStatus("conv-1", "stranger"),
+      ).rejects.toThrow("Unauthorized");
     });
   });
 

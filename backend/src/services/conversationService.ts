@@ -56,12 +56,36 @@ export const getConversationById = async (conversationId: string, userId: string
 };
 
 export const getMyConversations = async (userId: string) => {
-  return conversationRepo().find({
+  const conversations = await conversationRepo().find({
     where: [{ buyerId: userId }, { sellerId: userId }],
     relations: ["buyer", "seller", "listing"],
     order: { updatedAt: "DESC" },
   });
+
+  return conversations.map((conv) => ({
+    ...conv,
+    listingStatus: conv.listing?.status ?? null,
+  }));
 };
+
+export async function getConversationStatus(conversationId: string, userId: string) {
+  const conversation = await conversationRepo().findOne({
+    where: { conversationId },
+    relations: ["listing"],
+  });
+
+  if (!conversation) throw new AppError("Conversation not found", 404);
+
+  if (conversation.buyerId !== userId && conversation.sellerId !== userId) {
+    throw new AppError("Unauthorized", 403);
+  }
+
+  return {
+    conversationId: conversation.conversationId,
+    listingStatus: conversation.listing?.status,
+    isArchived: conversation.isArchived,
+  };
+}
 
 export const deleteConversation = async (conversationId: string, userId: string) => {
   const conversation = await conversationRepo().findOne({

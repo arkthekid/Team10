@@ -10,6 +10,7 @@ import reportRoutes from "./routes/reportRoutes";
 import categoryRoutes from "./routes/categoryRoutes";
 import { errorHandler } from "./middleware/errorHandler";
 import pickUpLocationRoutes from "./routes/pickUpLocationRoutes";
+import reviewRoutes from "./routes/reviewRoutes";
 
 export function createApp() {
   const app = express();
@@ -33,6 +34,8 @@ export function createApp() {
   app.use("/api/blocks", blockRoutes);
   app.use("/api/reports", reportRoutes);
   app.use("/api/pick-up-locations", pickUpLocationRoutes);
+  app.use("/api/reviews", reviewRoutes);
+  
   app.use("/api/categories", categoryRoutes);
 
   app.use(errorHandler);

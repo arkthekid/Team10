@@ -12,7 +12,6 @@ A full-stack marketplace platform for UMass students and faculty to buy, sell, a
 - [Setup & Installation](#setup--installation)
 - [Environment Variables](#environment-variables)
 - [Database Schema](#database-schema)
-- [API Endpoints](#api-endpoints)
 - [Contributing](#contributing)
 
 ---
@@ -30,7 +29,6 @@ UMass Marketplace allows students to create listings, upload images, browse cate
 - TypeScript
 - Vite
 - Tailwind CSS
-
 
 **Backend**
 - Node.js + Express
@@ -60,13 +58,10 @@ UMass Marketplace allows students to create listings, upload images, browse cate
 │   │   ├── server.ts        # Entry point
 │   │   └── tests/
 │   │── .gitignore
-│   │── jest.config.js
 │   │── package-lock.json
 │   │── package.json
-│   │── tsconfig.json
-│   │── package.json
-│   └── tsconfig.test.json
-│
+│   └──tsconfig.json
+├── documents/
 └── frontend/
     ├── src/
     │   ├── assets/
@@ -183,34 +178,6 @@ VITE_GOOGLE_CLIENT_ID=
 | buyerId | uuid | FK → User |
 | sellerId | uuid | FK → User |
 | createdAt | timestamp | Auto-generated |
-
----
-
-## API Endpoints
-
-### Auth
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Register a new user |
-| POST | `/api/auth/login` | Login and receive JWT |
-
-### Listings
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| GET | `/api/listings` | Get all listings | No |
-| GET | `/api/listings/:listingId` | Get a single listing with images | No |
-| POST | `/api/listings` | Create a listing | Yes |
-| PUT | `/api/listings/:listingId` | Update a listing | Yes |
-| DELETE | `/api/listings/:listingId` | Delete a listing | Yes |
-| POST | `/api/listings/:listingId/images` | Upload images to a listing | Yes |
-| DELETE | `/api/listings/images/:imageId` | Delete a listing image | Yes |
-
-### Conversations
-| Method | Endpoint | Description | Auth |
-|---|---|---|---|
-| GET | `/api/conversations` | Get user's conversations | Yes |
-| POST | `/api/conversations` | Start a conversation | Yes |
-| GET | `/api/conversations/:conversationId` | Get messages in a conversation | Yes |
 
 ---
 

@@ -29,11 +29,29 @@ const campusLocations = [
   "Fine Arts Center",
 ];
 
+const additionalLocations = [
+  "Brett Hall",
+  "Cance",
+  "Frank Dinning Hall",
+  "Northeast",
+  "Fieldstone",
+  "Southwest",
+  "Herter",
+  "Campus Center",
+  "Maple Hall",
+  "LGRT",
+];
+
 const seed = async () => {
   await AppDataSource.initialize();
   const repo = AppDataSource.getRepository(pickUpLocation);
 
-  const allLocations = [...residentialLocations, ...diningLocations, ...campusLocations];
+  const allLocations = [
+    ...residentialLocations,
+    ...diningLocations,
+    ...campusLocations,
+    ...additionalLocations,
+  ];
 
   for (const name of allLocations) {
     const existing = await repo.findOne({ where: { name } });

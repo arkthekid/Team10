@@ -9,6 +9,9 @@ jest.mock("../../src/controllers/listingController", () => ({
   getListings: jest.fn((req, res) => res.status(200).json({ success: true })),
   getMyListings: jest.fn((req, res) => res.status(200).json({ success: true })),
   getListingById: jest.fn((req, res) => res.status(200).json({ success: true })),
+  getListingStatus: jest.fn((req, res) => res.status(200).json({ status: "available" })),
+  getListingsByUserId: jest.fn((req, res) => res.status(200).json([])),
+  getMyOrders: jest.fn((req, res) => res.status(200).json([])),
   createListing: jest.fn((req, res) => res.status(201).json({ success: true })),
   updateListing: jest.fn((req, res) => res.status(200).json({ success: true })),
   deleteListing: jest.fn((req, res) => res.status(204).send()),
@@ -20,6 +23,10 @@ jest.mock("../../src/middleware/auth", () => ({
     req.user = { id: "user123", email: "user@umass.edu", role: "user" };
     next();
   }),
+}));
+
+jest.mock("../../src/config/supabase", () => ({
+  supabase: {},
 }));
 
 const app = express();
@@ -60,6 +67,13 @@ describe("listingRoutes", () => {
     expect(res.status).toBe(200);
     expect(listingController.getListingById).toHaveBeenCalled();
     expect(protect).not.toHaveBeenCalled();
+  });
+
+  it("GET /listings/:id/status routes to getListingStatus controller", async () => {
+    const res = await request(app).get("/listings/123/status");
+
+    expect(res.status).toBe(200);
+    expect(listingController.getListingStatus).toHaveBeenCalled();
   });
 
   it("POST /listings routes through protect and then createListing", async () => {
