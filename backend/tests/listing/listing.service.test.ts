@@ -1,6 +1,7 @@
 import * as listingService from "../../src/services/listingService";
 import { AppDataSource } from "../../src/config/data-source";
 import { Listing } from "../../src/entities/Listing";
+import { Conversation } from "../../src/entities/Conversation";
 
 // ✅ Mock DataSource (NOT entity)
 jest.mock("../../src/config/data-source", () => ({
@@ -519,29 +520,46 @@ describe("listingService", () => {
         listingId: "listing-1",
         sellerId: "user123",
         name: "Desk",
+        seller: { name: "Arkar" },
+        images: [],
+        categories: [],
+        status: "available",
+        pickUpLocation: "Brett Hall",
+        updatedAt: new Date(),
       };
 
-      const mockRepo = {
+      const mockListingRepo = {
         findOne: jest.fn().mockResolvedValue(mockListing),
       };
 
-      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+      const mockConversationRepo = {
+        count: jest.fn().mockResolvedValue(2),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockImplementation(
+        (entity) => {
+          if (entity === Listing) return mockListingRepo;
+          return mockConversationRepo;
+        },
+      );
 
       const result = await listingService.getListingById("listing-1");
 
-      expect(AppDataSource.getRepository).toHaveBeenCalledWith(Listing);
-      expect(mockRepo.findOne).toHaveBeenCalledWith({
-        where: { listingId: "listing-1" },
-      });
-      expect(result).toEqual(mockListing);
+      expect(result.listingId).toBe("listing-1");
+      expect(result.cntInterestedUser).toBe(2);
     });
 
     it("should throw error when listing does not exist", async () => {
-      const mockRepo = {
+      const mockListingRepo = {
         findOne: jest.fn().mockResolvedValue(null),
       };
 
-      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+      (AppDataSource.getRepository as jest.Mock).mockImplementation(
+        (entity) => {
+          if (entity === Listing) return mockListingRepo;
+          return { count: jest.fn().mockResolvedValue(0) };
+        },
+      );
 
       await expect(listingService.getListingById("missing-id")).rejects.toThrow(
         "Listing not found",
@@ -549,11 +567,16 @@ describe("listingService", () => {
     });
 
     it("should throw error if findOne fails", async () => {
-      const mockRepo = {
+      const mockListingRepo = {
         findOne: jest.fn().mockRejectedValue(new Error("Find failed")),
       };
 
-      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+      (AppDataSource.getRepository as jest.Mock).mockImplementation(
+        (entity) => {
+          if (entity === Listing) return mockListingRepo;
+          return { count: jest.fn().mockResolvedValue(0) };
+        },
+      );
 
       await expect(listingService.getListingById("listing-1")).rejects.toThrow(
         "Find failed",
@@ -608,6 +631,52 @@ describe("listingService", () => {
       await expect(listingService.getMyListings("user123")).rejects.toThrow(
         "Find failed",
       );
+    });
+  });
+
+  describe("getListingStatus", () => {
+    it("returns status of a listing", async () => {
+      const mockListing = {
+        listingId: "listing-1",
+        status: "available",
+        sellerMarkedSoldAt: null,
+        buyerMarkedReceivedAt: null,
+      };
+
+      const mockRepo = {
+        findOne: jest.fn().mockResolvedValue(mockListing),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      const result = await listingService.getListingStatus("listing-1");
+
+      expect(result.status).toBe("available");
+      expect(result.listingId).toBe("listing-1");
+    });
+
+    it("throws 404 if listing not found", async () => {
+      const mockRepo = {
+        findOne: jest.fn().mockResolvedValue(null),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await expect(listingService.getListingStatus("bad-id")).rejects.toThrow(
+        "Listing not found",
+      );
+    });
+
+    it("throws if repository fails", async () => {
+      const mockRepo = {
+        findOne: jest.fn().mockRejectedValue(new Error("DB error")),
+      };
+
+      (AppDataSource.getRepository as jest.Mock).mockReturnValue(mockRepo);
+
+      await expect(
+        listingService.getListingStatus("listing-1"),
+      ).rejects.toThrow("DB error");
     });
   });
 });
