@@ -71,6 +71,19 @@ export const getListingById = async (req: Request<{ id: string }>, res: Response
   }
 };
 
+export const getListingStatus = async (
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = req.params;
+    const status = await listingService.getListingStatus(id);
+    res.status(200).json(status);
+  } catch (error) {
+    next(error);
+  }
+};
 export const getListingsByUserId = async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;

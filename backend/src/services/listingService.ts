@@ -96,6 +96,23 @@ export async function getListingById(id: string) {
   }
 }
 
+export async function getListingStatus(listingId: string) {
+  const repo = AppDataSource.getRepository(Listing);
+
+  const listing = await repo.findOne({
+    where: { listingId },
+  });
+
+  if (!listing) throw new AppError("Listing not found", 404);
+
+  return {
+    listingId: listing.listingId,
+    status: listing.status,
+    sellerMarkedSoldAt: listing.sellerMarkedSoldAt,
+    buyerMarkedReceivedAt: listing.buyerMarkedReceivedAt,
+  };
+};
+
 export async function getListingsByUserId(userId: string) {
   const repo = AppDataSource.getRepository(Listing);
 

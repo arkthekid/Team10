@@ -9,6 +9,7 @@ const router = Router();
 router.get("/", listingController.getListings);
 router.get("/me", protect, listingController.getMyListings);
 router.get("/:id", listingController.getListingById);
+router.get("/:id/status", listingController.getListingStatus);
 router.get("/user/:userId", listingController.getListingsByUserId);
 router.get("/orders/me", protect, listingController.getMyOrders);
 
