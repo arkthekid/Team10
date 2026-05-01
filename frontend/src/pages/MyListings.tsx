@@ -8,7 +8,21 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80";
 
 const getListingId = (listing: any) => {
-  return listing.listingId || listing.id || listing.productId || listing._id;
+  return String(
+    listing.listingId || listing.id || listing.productId || listing._id || ""
+  );
+};
+
+const getLocalListingMetadata = (listingId: string) => {
+  try {
+    const savedMetadata = JSON.parse(
+      localStorage.getItem("listingMetadata") || "{}"
+    );
+
+    return savedMetadata[String(listingId)] || {};
+  } catch {
+    return {};
+  }
 };
 
 const getListingImage = (listing: any) => {
@@ -57,6 +71,21 @@ const normalizeListings = (data: any) => {
   if (Array.isArray(data.listings)) return data.listings;
   if (Array.isArray(data.data)) return data.data;
   return [];
+};
+
+const getListingLocation = (listing: any) => {
+  const id = getListingId(listing);
+  const localMetadata = getLocalListingMetadata(id);
+
+  return (
+    localMetadata.pickUpLocation ||
+    (typeof listing.pickUpLocation === "string"
+      ? listing.pickUpLocation
+      : listing.pickUpLocation?.name) ||
+    listing.location ||
+    listing.pickupLocation ||
+    "Pickup location not provided"
+  );
 };
 
 const MyListings = () => {
@@ -127,11 +156,7 @@ const MyListings = () => {
                   ? null
                   : Number(listing.price);
 
-              const location =
-                listing.pickUpLocation ||
-                listing.location ||
-                "Pickup location not provided";
-
+              const location = getListingLocation(listing);
               const image = getListingImage(listing);
               const statusLabel = getStatusLabel(listing.status);
 
