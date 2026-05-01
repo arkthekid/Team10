@@ -23,6 +23,7 @@ export const AppDataSource = new DataSource({
   synchronize: true,
   logging: false,
 
-  entities: [Listing, ListingImage, User, Favorite, Block, Conversation, Message, CategoryEntity, pickUpLocation, Review],
+  entities: [Listing, ListingImage, User, Conversation, Message, CategoryEntity, 
+    pickUpLocation, Review, Report, Favorite, Block],
 
 });
