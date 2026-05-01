@@ -59,6 +59,18 @@ const getListingId = (listing: any) => {
   );
 };
 
+const getLocalListingMetadata = (listingId: string) => {
+  try {
+    const savedMetadata = JSON.parse(
+      localStorage.getItem("listingMetadata") || "{}"
+    );
+
+    return savedMetadata[String(listingId)] || {};
+  } catch {
+    return {};
+  }
+};
+
 const getListingImages = (listing: any) => {
   const uploadedImages = Array.isArray(listing.images)
     ? listing.images
@@ -518,24 +530,36 @@ const ListingDetail = () => {
   };
 
   const title = listing.name || listing.title || "Untitled Listing";
+  const localMetadata = getLocalListingMetadata(getListingId(listing));
 
   const price =
     listing.price === null || listing.price === undefined
       ? null
       : Number(listing.price);
 
-  const location = listing.pickUpLocation || listing.location || "Not provided";
+  const location =
+    localMetadata.pickUpLocation ||
+    (typeof listing.pickUpLocation === "string"
+      ? listing.pickUpLocation
+      : listing.pickUpLocation?.name) ||
+    listing.location ||
+    listing.pickupLocation ||
+    "Not provided";
+
   const description = listing.description || "No description provided.";
 
   const rawCategory =
-    listing.category ||
-    listing.categoryName ||
-    listing.categoryType ||
-    listing.listingCategory ||
-    listing.type ||
-    listing.itemCategory ||
-    listing.productCategory ||
-    "General";
+    localMetadata.category ||
+    (Array.isArray(listing.categories) && listing.categories.length > 0
+      ? listing.categories[0]
+      : listing.category ||
+        listing.categoryName ||
+        listing.categoryType ||
+        listing.listingCategory ||
+        listing.type ||
+        listing.itemCategory ||
+        listing.productCategory ||
+        "General");
 
   const category = formatCategory(rawCategory);
   const condition = listing.condition || "Not provided";

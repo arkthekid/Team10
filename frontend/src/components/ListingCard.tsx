@@ -4,6 +4,24 @@ interface ListingCardProps {
   listing: any;
 }
 
+const getListingId = (listing: any) => {
+  return String(
+    listing?.listingId || listing?.id || listing?.productId || listing?._id || ""
+  );
+};
+
+const getLocalListingMetadata = (listingId: string) => {
+  try {
+    const savedMetadata = JSON.parse(
+      localStorage.getItem("listingMetadata") || "{}"
+    );
+
+    return savedMetadata[String(listingId)] || {};
+  } catch {
+    return {};
+  }
+};
+
 const getListingImage = (listing: any) => {
   const firstImage = Array.isArray(listing.images)
     ? listing.images[0]?.url ||
@@ -24,7 +42,9 @@ const getListingImage = (listing: any) => {
 };
 
 const ListingCard = ({ listing }: ListingCardProps) => {
-  const id = listing.listingId || listing.id || listing.productId || listing._id;
+  const id = getListingId(listing);
+  const localMetadata = getLocalListingMetadata(id);
+
   const title = listing.name || listing.title || "Untitled Listing";
   const image = getListingImage(listing);
 
@@ -34,7 +54,13 @@ const ListingCard = ({ listing }: ListingCardProps) => {
       : Number(listing.price);
 
   const location =
-    listing.pickUpLocation || listing.location || "Pickup location not provided";
+    localMetadata.pickUpLocation ||
+    (typeof listing.pickUpLocation === "string"
+      ? listing.pickUpLocation
+      : listing.pickUpLocation?.name) ||
+    listing.location ||
+    listing.pickupLocation ||
+    "Pickup location not provided";
 
   return (
     <Link
@@ -57,7 +83,10 @@ const ListingCard = ({ listing }: ListingCardProps) => {
         <p className="font-bold text-card-foreground">
           {price === null || Number(price) === 0
             ? "FREE"
-            : `$${price.toLocaleString()}`}
+            : `$${price.toLocaleString(undefined, {
+                minimumFractionDigits: price % 1 === 0 ? 0 : 2,
+                maximumFractionDigits: 2,
+              })}`}
         </p>
 
         <p className="text-sm text-card-foreground truncate">{title}</p>

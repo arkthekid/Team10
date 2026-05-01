@@ -12,13 +12,27 @@ export async function getMyListings() {
   return apiFetch("/listings/me");
 }
 
+export async function getCategories() {
+  return apiFetch("/categories");
+}
+
+export async function getPickUpLocations() {
+  return apiFetch("/pick-up-locations");
+}
+
 export async function createListing(listingData: {
   name: string;
+  title?: string;
   description: string;
   price: number | null;
-  pickUpLocation: string;
+  pickUpLocation?: string;
+  pickUpLocationId?: string | null;
+  location?: string;
   condition: string;
   category: string;
+  categoryIds: string[];
+  images: any[];
+  imageUrls: string[];
   imageUrl?: string;
 }) {
   return apiFetch("/listings", {
@@ -34,8 +48,10 @@ export async function updateListing(
     description: string;
     price: number | null;
     pickUpLocation: string;
+    pickUpLocationId?: string | null;
     condition: string;
     category: string;
+    categoryIds?: string[];
     imageUrl?: string;
   }
 ) {

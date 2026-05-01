@@ -4,7 +4,78 @@ import MarketplaceHeader from "@/components/MarketplaceHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { getListingById, updateListing } from "../lib/listingApi";
+import {
+  getCategories,
+  getListingById,
+  getPickUpLocations,
+  updateListing,
+} from "../lib/listingApi";
+
+const getLocalListingMetadata = (listingId: string) => {
+  try {
+    const savedMetadata = JSON.parse(
+      localStorage.getItem("listingMetadata") || "{}"
+    );
+
+    return savedMetadata[String(listingId)] || {};
+  } catch {
+    return {};
+  }
+};
+
+const saveListingMetadata = (
+  listingId: string,
+  metadata: {
+    category: string;
+    categoryId: string;
+    pickUpLocation: string;
+    pickUpLocationId: string;
+  }
+) => {
+  try {
+    const savedMetadata = JSON.parse(
+      localStorage.getItem("listingMetadata") || "{}"
+    );
+
+    savedMetadata[String(listingId)] = metadata;
+
+    localStorage.setItem("listingMetadata", JSON.stringify(savedMetadata));
+  } catch {
+    localStorage.setItem(
+      "listingMetadata",
+      JSON.stringify({ [String(listingId)]: metadata })
+    );
+  }
+};
+
+const getListingCategory = (listing: any, localMetadata: any) => {
+  return (
+    localMetadata.category ||
+    (Array.isArray(listing.categories) && listing.categories.length > 0
+      ? listing.categories[0]
+      : "") ||
+    listing.category ||
+    listing.categoryName ||
+    listing.categoryType ||
+    listing.listingCategory ||
+    listing.category?.name ||
+    listing.category?.label ||
+    listing.category?.value ||
+    ""
+  );
+};
+
+const getListingPickUpLocation = (listing: any, localMetadata: any) => {
+  return (
+    localMetadata.pickUpLocation ||
+    (typeof listing.pickUpLocation === "string"
+      ? listing.pickUpLocation
+      : listing.pickUpLocation?.name) ||
+    listing.location ||
+    listing.pickupLocation ||
+    ""
+  );
+};
 
 const EditListing = () => {
   const { id } = useParams();
@@ -15,21 +86,82 @@ const EditListing = () => {
 
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+
   const [category, setCategory] = useState("");
+  const [categoryId, setCategoryId] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState<any[]>([]);
+
   const [pickUpLocation, setPickUpLocation] = useState("");
+  const [pickUpLocationId, setPickUpLocationId] = useState("");
+  const [pickUpLocationOptions, setPickUpLocationOptions] = useState<any[]>([]);
+
   const [condition, setCondition] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
 
   useEffect(() => {
-    async function loadListing() {
+    async function loadData() {
       if (!id) return;
 
       try {
         setLoading(true);
 
-        const data = await getListingById(id);
-        const listing = data.listing || data;
+        const [listingResponse, categoriesResponse, locationsResponse] =
+          await Promise.all([
+            getListingById(id),
+            getCategories(),
+            getPickUpLocations(),
+          ]);
+
+        const listing = listingResponse.listing || listingResponse;
+        const localMetadata = getLocalListingMetadata(id);
+
+        const loadedCategories = Array.isArray(categoriesResponse)
+          ? categoriesResponse
+          : Array.isArray(categoriesResponse.categories)
+          ? categoriesResponse.categories
+          : Array.isArray(categoriesResponse.data)
+          ? categoriesResponse.data
+          : [];
+
+        const loadedLocations = Array.isArray(locationsResponse)
+          ? locationsResponse
+          : Array.isArray(locationsResponse.locations)
+          ? locationsResponse.locations
+          : Array.isArray(locationsResponse.pickUpLocations)
+          ? locationsResponse.pickUpLocations
+          : Array.isArray(locationsResponse.data)
+          ? locationsResponse.data
+          : [];
+
+        setCategoryOptions(loadedCategories);
+        setPickUpLocationOptions(loadedLocations);
+
+        const listingCategory = getListingCategory(listing, localMetadata);
+        const listingLocation = getListingPickUpLocation(listing, localMetadata);
+
+        const matchedCategory = loadedCategories.find((option: any) => {
+          const name = option.name || "";
+          const optionId = option.categoryId || option.id || option._id;
+          return (
+            name === listingCategory ||
+            String(optionId) === String(localMetadata.categoryId)
+          );
+        });
+
+        const matchedLocation = loadedLocations.find((option: any) => {
+          const name = option.name || "";
+          const optionId =
+            option.locationId ||
+            option.pickUpLocationId ||
+            option.id ||
+            option._id;
+
+          return (
+            name === listingLocation ||
+            String(optionId) === String(localMetadata.pickUpLocationId)
+          );
+        });
 
         setName(listing.name || listing.title || "");
         setPrice(
@@ -38,18 +170,29 @@ const EditListing = () => {
             : String(Number(listing.price))
         );
 
-        setCategory(
-          listing.category ||
-            listing.categoryName ||
-            listing.categoryType ||
-            listing.listingCategory ||
-            listing.category?.name ||
-            listing.category?.label ||
-            listing.category?.value ||
-            ""
+        setCategory(listingCategory);
+        setCategoryId(
+          matchedCategory
+            ? String(
+                matchedCategory.categoryId ||
+                  matchedCategory.id ||
+                  matchedCategory._id
+              )
+            : localMetadata.categoryId || ""
         );
 
-        setPickUpLocation(listing.pickUpLocation || listing.location || "");
+        setPickUpLocation(listingLocation);
+        setPickUpLocationId(
+          matchedLocation
+            ? String(
+                matchedLocation.locationId ||
+                  matchedLocation.pickUpLocationId ||
+                  matchedLocation.id ||
+                  matchedLocation._id
+              )
+            : localMetadata.pickUpLocationId || ""
+        );
+
         setCondition(listing.condition || "");
         setDescription(listing.description || "");
 
@@ -71,8 +214,35 @@ const EditListing = () => {
       }
     }
 
-    loadListing();
+    loadData();
   }, [id, navigate]);
+
+  const handleCategoryChange = (selectedId: string) => {
+    setCategoryId(selectedId);
+
+    const selectedCategory = categoryOptions.find((option) => {
+      const optionId = option.categoryId || option.id || option._id;
+      return String(optionId) === String(selectedId);
+    });
+
+    setCategory(selectedCategory?.name || "");
+  };
+
+  const handlePickUpLocationChange = (selectedId: string) => {
+    setPickUpLocationId(selectedId);
+
+    const selectedLocation = pickUpLocationOptions.find((option) => {
+      const optionId =
+        option.locationId ||
+        option.pickUpLocationId ||
+        option.id ||
+        option._id;
+
+      return String(optionId) === String(selectedId);
+    });
+
+    setPickUpLocation(selectedLocation?.name || "");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,12 +254,12 @@ const EditListing = () => {
       return;
     }
 
-    if (!pickUpLocation.trim()) {
+    if (!pickUpLocationId || !pickUpLocation) {
       toast.error("Pick-up location is required");
       return;
     }
 
-    if (!category.trim()) {
+    if (!categoryId || !category) {
       toast.error("Category is required");
       return;
     }
@@ -121,11 +291,20 @@ const EditListing = () => {
       await updateListing(id, {
         name: name.trim(),
         price: numericPrice,
-        category: category.trim(),
-        pickUpLocation: pickUpLocation.trim(),
+        category,
+        categoryIds: [categoryId],
+        pickUpLocation,
+        pickUpLocationId,
         condition: condition.trim(),
         description: description.trim(),
         imageUrl: imageUrl.trim() || undefined,
+      });
+
+      saveListingMetadata(id, {
+        category,
+        categoryId,
+        pickUpLocation,
+        pickUpLocationId,
       });
 
       toast.success("Listing updated successfully");
@@ -181,20 +360,21 @@ const EditListing = () => {
           <div>
             <label className="block text-lg font-medium mb-2">Category</label>
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={categoryId}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="">Select category</option>
-              <option value="General">General</option>
-              <option value="Books">Books</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Clothing">Clothing</option>
-              <option value="Furniture">Furniture</option>
-              <option value="Housing">Housing</option>
-              <option value="School Supplies">School Supplies</option>
-              <option value="Sports">Sports</option>
-              <option value="Other">Other</option>
+              {categoryOptions.map((option) => {
+                const optionId = option.categoryId || option.id || option._id;
+                const name = option.name || "Unnamed category";
+
+                return (
+                  <option key={String(optionId)} value={String(optionId)}>
+                    {name}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -202,11 +382,28 @@ const EditListing = () => {
             <label className="block text-lg font-medium mb-2">
               Pick-up Location
             </label>
-            <Input
-              value={pickUpLocation}
-              onChange={(e) => setPickUpLocation(e.target.value)}
-              placeholder="e.g. Brett Hall"
-            />
+            <select
+              value={pickUpLocationId}
+              onChange={(e) => handlePickUpLocationChange(e.target.value)}
+              className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Select pick-up location</option>
+              {pickUpLocationOptions.map((option) => {
+                const optionId =
+                  option.locationId ||
+                  option.pickUpLocationId ||
+                  option.id ||
+                  option._id;
+
+                const name = option.name || "Unnamed location";
+
+                return (
+                  <option key={String(optionId)} value={String(optionId)}>
+                    {name}
+                  </option>
+                );
+              })}
+            </select>
           </div>
 
           <div>

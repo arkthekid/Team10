@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,11 +11,14 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
-import { categories } from "@/data/listings";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ImagePlus, X } from "lucide-react";
-import { createListing } from "../lib/listingApi";
+import {
+  createListing,
+  getCategories,
+  getPickUpLocations,
+} from "../lib/listingApi";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
@@ -24,15 +27,132 @@ const CreateListing = () => {
 
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState("");
+
+  const [categoryId, setCategoryId] = useState("");
   const [category, setCategory] = useState("");
-  const [description, setDescription] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState<any[]>([]);
+
+  const [pickUpLocationId, setPickUpLocationId] = useState("");
   const [pickUpLocation, setPickUpLocation] = useState("");
+  const [pickUpLocationOptions, setPickUpLocationOptions] = useState<any[]>([]);
+
+  const [description, setDescription] = useState("");
   const [condition, setCondition] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [locationsLoading, setLocationsLoading] = useState(false);
+  const [showPublishWarning, setShowPublishWarning] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        setCategoriesLoading(true);
+
+        const data = await getCategories();
+
+        const loadedCategories = Array.isArray(data)
+          ? data
+          : Array.isArray(data.categories)
+          ? data.categories
+          : Array.isArray(data.data)
+          ? data.data
+          : [];
+
+        setCategoryOptions(loadedCategories);
+      } catch (err) {
+        console.error("CATEGORY LOAD ERROR:", err);
+        toast.error("Failed to load categories");
+        setCategoryOptions([]);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    }
+
+    async function loadPickUpLocations() {
+      try {
+        setLocationsLoading(true);
+
+        const data = await getPickUpLocations();
+
+        const loadedLocations = Array.isArray(data)
+          ? data
+          : Array.isArray(data.locations)
+          ? data.locations
+          : Array.isArray(data.pickUpLocations)
+          ? data.pickUpLocations
+          : Array.isArray(data.data)
+          ? data.data
+          : [];
+
+        setPickUpLocationOptions(loadedLocations);
+      } catch (err) {
+        console.error("PICKUP LOCATIONS ERROR:", err);
+        toast.error("Failed to load pick-up locations");
+        setPickUpLocationOptions([]);
+      } finally {
+        setLocationsLoading(false);
+      }
+    }
+
+    loadCategories();
+    loadPickUpLocations();
+  }, []);
+
+  const saveListingMetadata = (
+    listingId: string,
+    metadata: {
+      category: string;
+      categoryId: string;
+      pickUpLocation: string;
+      pickUpLocationId: string;
+    }
+  ) => {
+    try {
+      const savedMetadata = JSON.parse(
+        localStorage.getItem("listingMetadata") || "{}"
+      );
+
+      savedMetadata[String(listingId)] = metadata;
+
+      localStorage.setItem("listingMetadata", JSON.stringify(savedMetadata));
+    } catch {
+      localStorage.setItem(
+        "listingMetadata",
+        JSON.stringify({ [String(listingId)]: metadata })
+      );
+    }
+  };
+
+  const handleCategoryChange = (selectedId: string) => {
+    setCategoryId(selectedId);
+
+    const selectedCategory = categoryOptions.find((option) => {
+      const id = option.categoryId || option.id || option._id;
+      return String(id) === String(selectedId);
+    });
+
+    setCategory(selectedCategory?.name || "");
+  };
+
+  const handlePickUpLocationChange = (selectedId: string) => {
+    setPickUpLocationId(selectedId);
+
+    const selectedLocation = pickUpLocationOptions.find((option) => {
+      const id =
+        option.locationId ||
+        option.pickUpLocationId ||
+        option.id ||
+        option._id;
+
+      return String(id) === String(selectedId);
+    });
+
+    setPickUpLocation(selectedLocation?.name || "");
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -103,29 +223,31 @@ const CreateListing = () => {
     return (
       result?.listingId ||
       result?.id ||
+      result?._id ||
       result?.listing?.listingId ||
       result?.listing?.id ||
+      result?.listing?._id ||
       result?.data?.listingId ||
       result?.data?.id ||
+      result?.data?._id ||
       result?.data?.listing?.listingId ||
-      result?.data?.listing?.id
+      result?.data?.listing?.id ||
+      result?.data?.listing?._id
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     if (!title.trim()) {
       toast.error("Title is required");
       return;
     }
 
-    if (!category) {
+    if (!categoryId || !category) {
       toast.error("Category is required");
       return;
     }
 
-    if (!pickUpLocation.trim()) {
+    if (!pickUpLocationId || !pickUpLocation) {
       toast.error("Pick-up location is required");
       return;
     }
@@ -153,11 +275,17 @@ const CreateListing = () => {
 
       const payload = {
         name: title.trim(),
+        title: title.trim(),
         description: description.trim(),
         price: numericPrice,
-        pickUpLocation: pickUpLocation.trim(),
+        pickUpLocation,
+        pickUpLocationId,
+        location: pickUpLocation,
         condition,
         category,
+        categoryIds: [categoryId],
+        images: [],
+        imageUrls: [],
       };
 
       console.log("LISTING PAYLOAD:", payload);
@@ -167,6 +295,15 @@ const CreateListing = () => {
       console.log("CREATE LISTING RESPONSE:", result);
 
       const listingId = getCreatedListingId(result);
+
+      if (listingId) {
+        saveListingMetadata(String(listingId), {
+          category,
+          categoryId,
+          pickUpLocation,
+          pickUpLocationId,
+        });
+      }
 
       if (imageFiles.length > 0 && listingId) {
         await uploadListingImages(listingId, imageFiles);
@@ -197,7 +334,13 @@ const CreateListing = () => {
           Create New Listing
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setShowPublishWarning(true);
+          }}
+          className="space-y-4"
+        >
           <div>
             <Label htmlFor="title">Title</Label>
             <Input
@@ -223,32 +366,73 @@ const CreateListing = () => {
 
           <div>
             <Label>Category</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select
+              value={categoryId}
+              onValueChange={handleCategoryChange}
+              required
+              disabled={categoriesLoading}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue
+                  placeholder={
+                    categoriesLoading
+                      ? "Loading categories..."
+                      : "Select category"
+                  }
+                />
               </SelectTrigger>
 
               <SelectContent>
-                {categories
-                  .filter((c) => c !== "All")
-                  .map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
+                {categoryOptions.map((option) => {
+                  const id = option.categoryId || option.id || option._id;
+                  const name = option.name || "Unnamed category";
+
+                  return (
+                    <SelectItem key={String(id)} value={String(id)}>
+                      {name}
                     </SelectItem>
-                  ))}
+                  );
+                })}
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label htmlFor="pickUpLocation">Pick-up Location</Label>
-            <Input
-              id="pickUpLocation"
-              value={pickUpLocation}
-              onChange={(e) => setPickUpLocation(e.target.value)}
-              placeholder="e.g. Brett Hall"
+            <Label>Pick-up Location</Label>
+            <Select
+              value={pickUpLocationId}
+              onValueChange={handlePickUpLocationChange}
               required
-            />
+              disabled={locationsLoading}
+            >
+              <SelectTrigger>
+                <SelectValue
+                  placeholder={
+                    locationsLoading
+                      ? "Loading pick-up locations..."
+                      : "Select pick-up location"
+                  }
+                />
+              </SelectTrigger>
+
+              <SelectContent>
+                {pickUpLocationOptions.map((option) => {
+                  const id =
+                    option.locationId ||
+                    option.pickUpLocationId ||
+                    option.id ||
+                    option._id;
+
+                  const name = option.name || "Unnamed location";
+
+                  return (
+                    <SelectItem key={String(id)} value={String(id)}>
+                      {name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
@@ -328,6 +512,52 @@ const CreateListing = () => {
           </Button>
         </form>
       </main>
+
+      {showPublishWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-background border shadow-xl p-6">
+            <h3 className="text-xl font-bold mb-3">
+              Prohibited Item Warning
+            </h3>
+
+            <p className="text-sm text-muted-foreground leading-6 mb-4">
+              UMass Marketplace does not allow listings for illegal items,
+              drugs, weapons, alcohol, counterfeit goods, stolen property, or
+              any item that violates university policy or the law.
+            </p>
+
+            <p className="text-sm text-muted-foreground leading-6 mb-6">
+              By continuing, you confirm that your listing follows these rules.
+              Violations may result in the listing being removed, your account
+              being reported, and further action being taken.
+            </p>
+
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowPublishWarning(false)}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={() => {
+                  setShowPublishWarning(false);
+                  handleSubmit();
+                }}
+                disabled={loading}
+              >
+                I Understand
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
