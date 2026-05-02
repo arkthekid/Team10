@@ -20,6 +20,8 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
 
 export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: Response, next: NextFunction) => {
   try {
+    const userId = getUserId(req as Request);
+
     const {
       search,
       category, // can be undefined
@@ -47,7 +49,9 @@ export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: 
       ...(maxPrice !== undefined && {
         maxPrice: Number(maxPrice),
       }),
-    });
+      }, 
+      userId
+    );
 
     res.status(200).json(listings);
   } catch (error) {

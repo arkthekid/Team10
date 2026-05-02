@@ -6,9 +6,10 @@ import { protect } from "../middleware/auth";
 const router = Router();
 
 // public
-router.get("/", listingController.getListings);
+// listing reads need auth now so block visibility can be enforced
+router.get("/", protect, listingController.getListings);
 router.get("/me", protect, listingController.getMyListings);
-router.get("/:id", listingController.getListingById);
+router.get("/:id", protect,listingController.getListingById);
 router.get("/:id/status", listingController.getListingStatus);
 router.get("/user/:userId", listingController.getListingsByUserId);
 router.get("/orders/me", protect, listingController.getMyOrders);
