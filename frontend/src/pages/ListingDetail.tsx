@@ -27,6 +27,7 @@ import {
   getMyFavorites,
   removeFavorite,
 } from "../lib/favoriteApi";
+import { createReport, ReportReason } from "../lib/reportApi";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80";
@@ -248,6 +249,12 @@ const ListingDetail = () => {
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSafetyNotice, setShowSafetyNotice] = useState(false);
+
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] =
+    useState<ReportReason>("fake_listing");
+  const [reportComments, setReportComments] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -513,6 +520,31 @@ const ListingDetail = () => {
     navigate(`/listing/${id}/edit`);
   };
 
+  const handleSubmitReport = async () => {
+    if (!id) return;
+
+    try {
+      setReportSubmitting(true);
+
+      await createReport({
+        targetType: "listing",
+        targetId: id,
+        reason: reportReason,
+        comments: reportComments.trim() || null,
+      });
+
+      toast.success("Report submitted successfully");
+      setShowReportModal(false);
+      setReportReason("fake_listing");
+      setReportComments("");
+    } catch (err: any) {
+      console.error("REPORT LISTING ERROR:", err);
+      toast.error(err.message || "Failed to submit report");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   const images = getListingImages(listing);
   const currentImage = images[currentImageIndex] || fallbackImage;
   const hasMultipleImages = images.length > 1;
@@ -654,7 +686,7 @@ const ListingDetail = () => {
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-muted text-left"
                         onClick={() => {
                           setMenuOpen(false);
-                          toast.info("Report feature coming soon");
+                          setShowReportModal(true);
                         }}
                       >
                         <Flag className="w-5 h-5" />
@@ -787,6 +819,77 @@ const ListingDetail = () => {
         onClose={() => setShowSafetyNotice(false)}
         onProceed={handleSafetyProceed}
       />
+
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-background border shadow-xl p-6">
+            <h3 className="text-xl font-bold mb-3">Report Listing</h3>
+
+            <p className="text-sm text-muted-foreground leading-6 mb-4">
+              Please choose the reason that best describes the issue with this
+              listing. Reports are reviewed by the marketplace team.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Reason</label>
+                <select
+                  value={reportReason}
+                  onChange={(e) =>
+                    setReportReason(e.target.value as ReportReason)
+                  }
+                  className="w-full h-11 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="fake_listing">Fake listing</option>
+                  <option value="scam_or_fraud">Scam or fraud</option>
+                  <option value="spam">Spam</option>
+                  <option value="harassment">Harassment</option>
+                  <option value="inappropriate_content">
+                    Inappropriate content
+                  </option>
+                  <option value="suspicious_activity">
+                    Suspicious activity
+                  </option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Additional details
+                </label>
+                <textarea
+                  value={reportComments}
+                  onChange={(e) => setReportComments(e.target.value)}
+                  className="w-full min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  placeholder="Optional: Explain what seems wrong with this listing."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowReportModal(false)}
+                disabled={reportSubmitting}
+              >
+                Cancel
+              </Button>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={handleSubmitReport}
+                disabled={reportSubmitting}
+              >
+                {reportSubmitting ? "Submitting..." : "Submit Report"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

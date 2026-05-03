@@ -12,20 +12,76 @@ import {
 import { Button } from "@/components/ui/button";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import ListingCard from "@/components/ListingCard";
-import { getListingById, getListings } from "@/lib/listingApi";
+import { getCategories, getListingById, getListings } from "@/lib/listingApi";
 import { getBlockedUsers } from "@/lib/blockApi";
 
 const getListingId = (listing: any) => {
-  return listing.listingId || listing.id || listing.productId || listing._id;
+  return String(
+    listing.listingId || listing.id || listing.productId || listing._id || ""
+  );
+};
+
+const getLocalListingMetadata = (listingId: string) => {
+  try {
+    const savedMetadata = JSON.parse(
+      localStorage.getItem("listingMetadata") || "{}"
+    );
+
+    return savedMetadata[String(listingId)] || {};
+  } catch {
+    return {};
+  }
+};
+
+const normalizeCategoryName = (value: any) => {
+  if (!value) return "Uncategorized";
+
+  if (typeof value === "object") {
+    return normalizeCategoryName(
+      value.name || value.label || value.value || value.category
+    );
+  }
+
+  return String(value).trim();
 };
 
 const getListingCategory = (listing: any) => {
-  if (typeof listing.category === "string") return listing.category;
-  if (listing.category?.name) return listing.category.name;
-  if (listing.category?.label) return listing.category.label;
-  if (listing.category?.value) return listing.category.value;
-  if (listing.categoryId?.name) return listing.categoryId.name;
+  const listingId = getListingId(listing);
+  const localMetadata = getLocalListingMetadata(listingId);
+
+  if (localMetadata.category) {
+    return normalizeCategoryName(localMetadata.category);
+  }
+
+  if (Array.isArray(listing.categories) && listing.categories.length > 0) {
+    return normalizeCategoryName(listing.categories[0]);
+  }
+
+  if (typeof listing.category === "string") {
+    return normalizeCategoryName(listing.category);
+  }
+
+  if (listing.category?.name) return normalizeCategoryName(listing.category.name);
+  if (listing.category?.label) return normalizeCategoryName(listing.category.label);
+  if (listing.category?.value) return normalizeCategoryName(listing.category.value);
+  if (listing.categoryId?.name) return normalizeCategoryName(listing.categoryId.name);
+
   return "Uncategorized";
+};
+
+const getListingLocation = (listing: any) => {
+  const listingId = getListingId(listing);
+  const localMetadata = getLocalListingMetadata(listingId);
+
+  return (
+    localMetadata.pickUpLocation ||
+    (typeof listing.pickUpLocation === "string"
+      ? listing.pickUpLocation
+      : listing.pickUpLocation?.name) ||
+    listing.location ||
+    listing.pickupLocation ||
+    ""
+  );
 };
 
 const getListingUpdatedTime = (listing: any) => {
@@ -40,12 +96,31 @@ const getListingUpdatedTime = (listing: any) => {
   return Number.isNaN(time) ? 0 : time;
 };
 
+const normalizeListings = (data: any) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.listings)) return data.listings;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+};
+
+const normalizeCategories = (data: any) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.categories)) return data.categories;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+};
+
+const getCategoryOptionName = (category: any) => {
+  return normalizeCategoryName(category?.name || category);
+};
+
 const Browse = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [priceFilter, setPriceFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("latest");
   const [listings, setListings] = useState<any[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<any[]>([]);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,16 +131,14 @@ const Browse = () => {
         setLoading(true);
         setError("");
 
-        const [listingsData, blockedData] = await Promise.all([
+        const [listingsData, blockedData, categoriesData] = await Promise.all([
           getListings(),
           getBlockedUsers().catch(() => []),
+          getCategories().catch(() => []),
         ]);
 
-        const normalizedListings = Array.isArray(listingsData)
-          ? listingsData
-          : Array.isArray(listingsData.listings)
-          ? listingsData.listings
-          : [];
+        const normalizedListings = normalizeListings(listingsData);
+        const normalizedCategories = normalizeCategories(categoriesData);
 
         const fullListings = await Promise.all(
           normalizedListings.map(async (listing: any) => {
@@ -104,6 +177,7 @@ const Browse = () => {
           .map((id: any) => String(id));
 
         setListings(fullListings);
+        setCategoryOptions(normalizedCategories);
         setBlockedUserIds(blockedIds);
       } catch (err: any) {
         console.error("Failed to load listings:", err);
@@ -132,22 +206,28 @@ const Browse = () => {
   }, [listings, blockedUserIds]);
 
   const categories = useMemo(() => {
-    const names = visibleListings
-      .map((listing) => getListingCategory(listing))
-      .filter(Boolean);
+    const apiCategoryNames = categoryOptions
+      .map((item) => getCategoryOptionName(item))
+      .filter(Boolean)
+      .filter((name) => name !== "Uncategorized");
 
-    return ["All", ...Array.from(new Set(names as string[]))];
-  }, [visibleListings]);
+    const listingCategoryNames = visibleListings
+      .map((listing) => getListingCategory(listing))
+      .filter(Boolean)
+      .filter((name) => name !== "Uncategorized");
+
+    const names = Array.from(
+      new Set([...apiCategoryNames, ...listingCategoryNames])
+    ).sort((a, b) => a.localeCompare(b));
+
+    return ["All", ...names];
+  }, [categoryOptions, visibleListings]);
 
   const filtered = visibleListings
     .filter((listing) => {
       const title = (listing.title || listing.name || "").toLowerCase();
       const description = (listing.description || "").toLowerCase();
-      const location = (
-        listing.pickUpLocation ||
-        listing.location ||
-        ""
-      ).toLowerCase();
+      const location = getListingLocation(listing).toLowerCase();
 
       const listingCategory = getListingCategory(listing);
 
@@ -214,8 +294,8 @@ const Browse = () => {
           </Select>
 
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="w-full sm:w-36 h-11">
-              <SelectValue />
+            <SelectTrigger className="w-full sm:w-44 h-11">
+              <SelectValue placeholder="All" />
             </SelectTrigger>
 
             <SelectContent>
