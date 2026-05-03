@@ -76,3 +76,14 @@ export async function unblockUser(blockerId: string, blockedId: string) {
 
   return { message: "User unblocked successfully" };
 }
+
+// get all users who have blocked the current user
+export async function getBlockerIdsForUser(blockedId: string): Promise<string[]> {
+  const blockRepo = AppDataSource.getRepository(Block);
+
+  const blocks = await blockRepo.find({
+    where: { blockedId },
+  });
+
+  return blocks.map((block) => block.blockerId);
+}

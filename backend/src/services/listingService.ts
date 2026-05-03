@@ -5,6 +5,7 @@ import { User } from "../entities/User";
 import { GetListingDto } from "../dto/getListing.dto";
 import { Conversation } from "../entities/Conversation";
 import { CategoryEntity } from "../entities/Category";
+import { getBlockerIdsForUser } from "./blockService";
 
 export async function createListing(data: Partial<Listing>, categoriesIDs: string[], userId: string) {
   const listingRepository = AppDataSource.getRepository(Listing);
@@ -21,7 +22,7 @@ export async function createListing(data: Partial<Listing>, categoriesIDs: strin
   return await listingRepository.save(listing);
 }
 
-export async function getListings(query: GetListingDto) {
+export async function getListings(query: GetListingDto, currentUserId: string) {
   const repo = AppDataSource.getRepository(Listing);
   const qb = repo.createQueryBuilder("listing");
 
@@ -50,6 +51,14 @@ export async function getListings(query: GetListingDto) {
         search: `%${query.search}%`,
       }
     );
+  }
+
+  // hide listings from users who blocked the current user
+  const blockerIds = await getBlockerIdsForUser(currentUserId);
+  if (blockerIds.length > 0) {
+    qb.andWhere("listing.sellerId NOT IN (:...blockerIds)", {
+      blockerIds,
+    });
   }
 
   qb.orderBy(
