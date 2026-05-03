@@ -22,6 +22,88 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
+const normalizeCategories = (data: any) => {
+  const rawCategories = Array.isArray(data)
+    ? data
+    : Array.isArray(data.categories)
+    ? data.categories
+    : Array.isArray(data.category)
+    ? data.category
+    : Array.isArray(data.data)
+    ? data.data
+    : Array.isArray(data.result)
+    ? data.result
+    : [];
+
+  return rawCategories
+    .map((option: any) => {
+      const id = String(
+        option?.categoryId ||
+          option?.id ||
+          option?._id ||
+          option?.value ||
+          ""
+      );
+
+      const name = String(
+        option?.name ||
+          option?.categoryName ||
+          option?.category ||
+          option?.label ||
+          option?.title ||
+          ""
+      );
+
+      if (!id || !name) return null;
+
+      return { id, name };
+    })
+    .filter(Boolean) as { id: string; name: string }[];
+};
+
+const normalizePickUpLocations = (data: any) => {
+  const rawLocations = Array.isArray(data)
+    ? data
+    : Array.isArray(data.locations)
+    ? data.locations
+    : Array.isArray(data.pickUpLocations)
+    ? data.pickUpLocations
+    : Array.isArray(data.pickupLocations)
+    ? data.pickupLocations
+    : Array.isArray(data.data)
+    ? data.data
+    : Array.isArray(data.result)
+    ? data.result
+    : [];
+
+  return rawLocations
+    .map((option: any) => {
+      const id = String(
+        option?.locationId ||
+          option?.pickUpLocationId ||
+          option?.pickupLocationId ||
+          option?.id ||
+          option?._id ||
+          ""
+      );
+
+      const name = String(
+        option?.name ||
+          option?.locationName ||
+          option?.pickUpLocationName ||
+          option?.pickupLocationName ||
+          option?.label ||
+          option?.title ||
+          ""
+      );
+
+      if (!id || !name) return null;
+
+      return { id, name };
+    })
+    .filter(Boolean) as { id: string; name: string }[];
+};
+
 const CreateListing = () => {
   const navigate = useNavigate();
 
@@ -30,11 +112,15 @@ const CreateListing = () => {
 
   const [categoryId, setCategoryId] = useState("");
   const [category, setCategory] = useState("");
-  const [categoryOptions, setCategoryOptions] = useState<any[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   const [pickUpLocationId, setPickUpLocationId] = useState("");
   const [pickUpLocation, setPickUpLocation] = useState("");
-  const [pickUpLocationOptions, setPickUpLocationOptions] = useState<any[]>([]);
+  const [pickUpLocationOptions, setPickUpLocationOptions] = useState<
+    { id: string; name: string }[]
+  >([]);
 
   const [description, setDescription] = useState("");
   const [condition, setCondition] = useState("");
@@ -53,19 +139,18 @@ const CreateListing = () => {
         setCategoriesLoading(true);
 
         const data = await getCategories();
+        console.log("CATEGORIES RESPONSE:", data);
 
-        const loadedCategories = Array.isArray(data)
-          ? data
-          : Array.isArray(data.categories)
-          ? data.categories
-          : Array.isArray(data.data)
-          ? data.data
-          : [];
+        const loadedCategories = normalizeCategories(data);
+
+        if (loadedCategories.length === 0) {
+          toast.error("No categories were returned by the backend");
+        }
 
         setCategoryOptions(loadedCategories);
       } catch (err) {
         console.error("CATEGORY LOAD ERROR:", err);
-        toast.error("Failed to load categories");
+        toast.error("Failed to load categories from backend");
         setCategoryOptions([]);
       } finally {
         setCategoriesLoading(false);
@@ -77,21 +162,18 @@ const CreateListing = () => {
         setLocationsLoading(true);
 
         const data = await getPickUpLocations();
+        console.log("PICKUP LOCATIONS RESPONSE:", data);
 
-        const loadedLocations = Array.isArray(data)
-          ? data
-          : Array.isArray(data.locations)
-          ? data.locations
-          : Array.isArray(data.pickUpLocations)
-          ? data.pickUpLocations
-          : Array.isArray(data.data)
-          ? data.data
-          : [];
+        const loadedLocations = normalizePickUpLocations(data);
+
+        if (loadedLocations.length === 0) {
+          toast.error("No pick-up locations were returned by the backend");
+        }
 
         setPickUpLocationOptions(loadedLocations);
       } catch (err) {
         console.error("PICKUP LOCATIONS ERROR:", err);
-        toast.error("Failed to load pick-up locations");
+        toast.error("Failed to load pick-up locations from backend");
         setPickUpLocationOptions([]);
       } finally {
         setLocationsLoading(false);
@@ -131,8 +213,7 @@ const CreateListing = () => {
     setCategoryId(selectedId);
 
     const selectedCategory = categoryOptions.find((option) => {
-      const id = option.categoryId || option.id || option._id;
-      return String(id) === String(selectedId);
+      return String(option.id) === String(selectedId);
     });
 
     setCategory(selectedCategory?.name || "");
@@ -142,13 +223,7 @@ const CreateListing = () => {
     setPickUpLocationId(selectedId);
 
     const selectedLocation = pickUpLocationOptions.find((option) => {
-      const id =
-        option.locationId ||
-        option.pickUpLocationId ||
-        option.id ||
-        option._id;
-
-      return String(id) === String(selectedId);
+      return String(option.id) === String(selectedId);
     });
 
     setPickUpLocation(selectedLocation?.name || "");
@@ -383,16 +458,17 @@ const CreateListing = () => {
               </SelectTrigger>
 
               <SelectContent>
-                {categoryOptions.map((option) => {
-                  const id = option.categoryId || option.id || option._id;
-                  const name = option.name || "Unnamed category";
-
-                  return (
-                    <SelectItem key={String(id)} value={String(id)}>
-                      {name}
+                {categoryOptions.length === 0 ? (
+                  <SelectItem value="no-categories" disabled>
+                    No categories available
+                  </SelectItem>
+                ) : (
+                  categoryOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
                     </SelectItem>
-                  );
-                })}
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -416,21 +492,17 @@ const CreateListing = () => {
               </SelectTrigger>
 
               <SelectContent>
-                {pickUpLocationOptions.map((option) => {
-                  const id =
-                    option.locationId ||
-                    option.pickUpLocationId ||
-                    option.id ||
-                    option._id;
-
-                  const name = option.name || "Unnamed location";
-
-                  return (
-                    <SelectItem key={String(id)} value={String(id)}>
-                      {name}
+                {pickUpLocationOptions.length === 0 ? (
+                  <SelectItem value="no-locations" disabled>
+                    No pick-up locations available
+                  </SelectItem>
+                ) : (
+                  pickUpLocationOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name}
                     </SelectItem>
-                  );
-                })}
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

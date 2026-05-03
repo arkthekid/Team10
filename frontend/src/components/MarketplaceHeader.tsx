@@ -92,6 +92,14 @@ const MarketplaceHeader = () => {
                       </Link>
 
                       <Link
+                        to="/my-orders"
+                        onClick={() => setProfileOpen(false)}
+                        className="block px-4 py-3 text-sm hover:bg-muted transition-colors"
+                      >
+                        My Orders
+                      </Link>
+
+                      <Link
                         to="/blocked-users"
                         onClick={() => setProfileOpen(false)}
                         className="block px-4 py-3 text-sm hover:bg-muted transition-colors"
