@@ -58,13 +58,6 @@ const MarketplaceHeader = () => {
             {isLoggedIn ? (
               <>
                 <Link
-                  to="/create"
-                  className="hover:text-primary-foreground/80 transition-colors"
-                >
-                  Sell
-                </Link>
-
-                <Link
                   to="/favorites"
                   className="hover:text-primary-foreground/80 transition-colors"
                 >
