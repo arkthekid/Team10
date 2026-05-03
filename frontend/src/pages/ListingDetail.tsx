@@ -496,7 +496,17 @@ const ListingDetail = () => {
       setBlocking(true);
       await blockUser(sellerIdToBlock);
 
-      toast.success("Seller blocked successfully");
+      const blockedSellerName =
+        listing.sellerName ||
+        listing.nameOfSeller ||
+        listing.seller?.name ||
+        listing.user?.name ||
+        "This seller";
+
+      toast.success(
+        `${blockedSellerName} has been successfully blocked. You will no longer be able to message each other or see each other's listings.`
+      );
+
       setMenuOpen(false);
       navigate("/browse");
     } catch (err: any) {
