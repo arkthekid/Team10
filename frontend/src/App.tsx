@@ -10,6 +10,7 @@ import Messages from "./pages/Messages";
 import Favorites from "./pages/Favorites";
 import BlockedUsers from "./pages/BlockedUsers";
 import MyListings from "./pages/MyListings";
+import MyOrders from "./pages/MyOrders";
 import NotFound from "./pages/NotFound";
 import VerifyEmail from "./pages/VerifyEmail";
 import SellerReviews from "./pages/SellerReviews";
@@ -30,6 +31,7 @@ const App = () => {
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/blocked-users" element={<BlockedUsers />} />
         <Route path="/my-listings" element={<MyListings />} />
+        <Route path="/my-orders" element={<MyOrders />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
