@@ -2,20 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, CheckCircle, Trash2 } from "lucide-react";
+import { Send, CheckCircle, Trash2, Clock, PackageCheck } from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/authApi";
 import {
   getConversations,
   startConversation,
+  markConversationSold,
   markConversationCompleted,
 } from "@/lib/conversationApi";
-import {
-  getMessages,
-  sendMessage,
-  deleteMessage,
-} from "@/lib/messageApi";
+import { getMessages, sendMessage, deleteMessage } from "@/lib/messageApi";
+
+type ListingStatus = "available" | "sold_pending" | "completed";
 
 const getUserFromResponse = (data: any) => {
   return data?.user || data?.data?.user || data?.data || data || {};
@@ -77,15 +76,33 @@ const getListingPrice = (conversation: any) => {
       })}`;
 };
 
-const getOtherUserName = (conversation: any, currentUserId: string) => {
-  const buyerId = String(conversation?.buyerId || conversation?.buyer?.id || "");
-  const sellerId = String(
-    conversation?.sellerId ||
-      conversation?.seller?.id ||
-      conversation?.listing?.sellerId ||
-      conversation?.listing?.seller?.id ||
+const getConversationBuyerId = (conversation: any) => {
+  return String(
+    conversation?.buyerId ||
+      conversation?.buyer?.id ||
+      conversation?.buyer?.userId ||
+      conversation?.conversation?.buyerId ||
+      conversation?.conversation?.buyer?.id ||
+      conversation?.conversation?.buyer?.userId ||
       ""
   );
+};
+
+const getConversationSellerId = (conversation: any) => {
+  return String(
+    conversation?.sellerId ||
+      conversation?.seller?.id ||
+      conversation?.seller?.userId ||
+      conversation?.conversation?.sellerId ||
+      conversation?.conversation?.seller?.id ||
+      conversation?.conversation?.seller?.userId ||
+      ""
+  );
+};
+
+const getOtherUserName = (conversation: any, currentUserId: string) => {
+  const buyerId = getConversationBuyerId(conversation);
+  const sellerId = getConversationSellerId(conversation);
 
   if (currentUserId && currentUserId === buyerId) {
     return (
@@ -108,6 +125,39 @@ const getOtherUserName = (conversation: any, currentUserId: string) => {
   );
 };
 
+const getListingStatus = (conversation: any): ListingStatus => {
+  const status =
+    conversation?.listingStatus ||
+    conversation?.listing?.status ||
+    conversation?.status ||
+    "available";
+
+  if (status === "sold_pending" || status === "pending") return "sold_pending";
+  if (status === "completed" || status === "complete" || status === "sold") {
+    return "completed";
+  }
+
+  return "available";
+};
+
+const getStatusLabel = (status: ListingStatus) => {
+  if (status === "sold_pending") return "Sale Pending";
+  if (status === "completed") return "Complete";
+  return "Available";
+};
+
+const getStatusClass = (status: ListingStatus) => {
+  if (status === "sold_pending") {
+    return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  }
+
+  if (status === "completed") {
+    return "bg-green-100 text-green-800 border-green-200";
+  }
+
+  return "bg-blue-100 text-blue-800 border-blue-200";
+};
+
 const normalizeConversations = (data: any) => {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data.conversations)) return data.conversations;
@@ -126,6 +176,22 @@ const normalizeStartedConversation = (data: any) => {
   return data?.conversation || data?.data?.conversation || data?.data || data;
 };
 
+const updateConversationStatus = (
+  conversation: any,
+  status: ListingStatus,
+  updatedListing?: any
+) => {
+  return {
+    ...conversation,
+    listingStatus: status,
+    listing: {
+      ...(conversation?.listing || {}),
+      ...(updatedListing || {}),
+      status,
+    },
+  };
+};
+
 const Messages = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -139,7 +205,7 @@ const Messages = () => {
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [completed, setCompleted] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const selectedConversationId = selectedConversation
     ? getConversationId(selectedConversation)
@@ -208,7 +274,6 @@ const Messages = () => {
 
   const conversationTitle = useMemo(() => {
     if (!selectedConversation) return "Messages";
-
     return getOtherUserName(selectedConversation, currentUserId);
   }, [selectedConversation, currentUserId]);
 
@@ -221,6 +286,54 @@ const Messages = () => {
     return price ? `${title} · ${price}` : title;
   }, [selectedConversation]);
 
+  const listingStatus = selectedConversation
+    ? getListingStatus(selectedConversation)
+    : "available";
+
+  const selectedBuyerId = selectedConversation
+    ? getConversationBuyerId(selectedConversation)
+    : "";
+
+  const selectedSellerId = selectedConversation
+    ? getConversationSellerId(selectedConversation)
+    : "";
+
+  const isBuyer =
+    !!selectedConversation &&
+    !!currentUserId &&
+    !!selectedBuyerId &&
+    currentUserId === selectedBuyerId;
+
+  const isSeller =
+    !!selectedConversation &&
+    !!currentUserId &&
+    !!selectedSellerId &&
+    !!selectedBuyerId &&
+    currentUserId === selectedSellerId &&
+    currentUserId !== selectedBuyerId;
+
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    console.log("MESSAGE ROLE CHECK:", {
+      currentUserId,
+      selectedBuyerId,
+      selectedSellerId,
+      isBuyer,
+      isSeller,
+      listingStatus,
+      selectedConversation,
+    });
+  }, [
+    currentUserId,
+    selectedBuyerId,
+    selectedSellerId,
+    isBuyer,
+    isSeller,
+    listingStatus,
+    selectedConversation,
+  ]);
+
   const handleSend = async () => {
     if (!input.trim() || !selectedConversationId || sending) return;
 
@@ -230,7 +343,8 @@ const Messages = () => {
       setSending(true);
 
       const sent = await sendMessage(selectedConversationId, body);
-      const newMessage = sent?.message || sent?.data?.message || sent?.data || sent;
+      const newMessage =
+        sent?.message || sent?.data?.message || sent?.data || sent;
 
       setMessages((prev) => [...prev, newMessage]);
       setInput("");
@@ -251,7 +365,9 @@ const Messages = () => {
     try {
       await deleteMessage(messageId);
       setMessages((prev) =>
-        prev.filter((message) => String(message.id || message.messageId) !== messageId)
+        prev.filter(
+          (message) => String(message.id || message.messageId) !== messageId
+        )
       );
       toast.success("Message deleted");
     } catch (err: any) {
@@ -260,16 +376,75 @@ const Messages = () => {
     }
   };
 
-  const handleMarkComplete = async () => {
-    if (!selectedConversationId) return;
+  const syncUpdatedConversation = (
+    status: ListingStatus,
+    updatedListing?: any
+  ) => {
+    setSelectedConversation((prev: any) => {
+      if (!prev) return prev;
+      return updateConversationStatus(prev, status, updatedListing);
+    });
+
+    setConversations((prev) =>
+      prev.map((conversation) => {
+        if (getConversationId(conversation) !== selectedConversationId) {
+          return conversation;
+        }
+
+        return updateConversationStatus(conversation, status, updatedListing);
+      })
+    );
+  };
+
+  const handleMarkSold = async () => {
+    if (!selectedConversationId || statusUpdating || !isSeller) {
+      toast.error("Only the seller can mark this listing as sold.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Mark this listing as sale pending for this buyer?"
+    );
+    if (!confirmed) return;
 
     try {
-      await markConversationCompleted(selectedConversationId);
-      setCompleted(true);
-      toast.success("Conversation marked complete");
+      setStatusUpdating(true);
+
+      const updatedListing = await markConversationSold(selectedConversationId);
+
+      syncUpdatedConversation("sold_pending", updatedListing);
+      toast.success("Listing marked as sale pending");
+    } catch (err: any) {
+      console.error("MARK SOLD ERROR:", err);
+      toast.error(err.message || "Failed to mark as sold");
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    if (!selectedConversationId || statusUpdating || !isBuyer) {
+      toast.error("Only the buyer can mark this transaction as complete.");
+      return;
+    }
+
+    const confirmed = window.confirm("Mark this transaction as complete?");
+    if (!confirmed) return;
+
+    try {
+      setStatusUpdating(true);
+
+      const updatedListing = await markConversationCompleted(
+        selectedConversationId
+      );
+
+      syncUpdatedConversation("completed", updatedListing);
+      toast.success("Transaction marked complete");
     } catch (err: any) {
       console.error("MARK COMPLETE ERROR:", err);
       toast.error(err.message || "Failed to mark complete");
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -290,6 +465,94 @@ const Messages = () => {
     );
 
     return currentUserId && senderId === currentUserId;
+  };
+
+  const renderStatusAction = () => {
+    if (!selectedConversationId) return null;
+
+    if (listingStatus === "available" && isSeller) {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          className="whitespace-nowrap text-xs"
+          onClick={handleMarkSold}
+          disabled={statusUpdating}
+        >
+          <Clock className="w-4 h-4 mr-1 text-muted-foreground" />
+          {statusUpdating ? "Updating..." : "Mark Sold"}
+        </Button>
+      );
+    }
+
+    if (listingStatus === "available" && isBuyer) {
+      return (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="whitespace-nowrap text-xs"
+          disabled
+        >
+          <Clock className="w-4 h-4 mr-1" />
+          Waiting for Seller
+        </Button>
+      );
+    }
+
+    if (listingStatus === "sold_pending" && isBuyer) {
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          className="whitespace-nowrap text-xs"
+          onClick={handleMarkComplete}
+          disabled={statusUpdating}
+        >
+          <PackageCheck className="w-4 h-4 mr-1 text-muted-foreground" />
+          {statusUpdating ? "Updating..." : "Mark Complete"}
+        </Button>
+      );
+    }
+
+    if (listingStatus === "sold_pending" && isSeller) {
+      return (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="whitespace-nowrap text-xs"
+          disabled
+        >
+          <Clock className="w-4 h-4 mr-1" />
+          Waiting for Buyer
+        </Button>
+      );
+    }
+
+    if (listingStatus === "completed") {
+      return (
+        <Button
+          variant="secondary"
+          size="sm"
+          className="whitespace-nowrap text-xs bg-green-600 text-white hover:bg-green-700"
+          disabled
+        >
+          <CheckCircle className="w-4 h-4 mr-1 text-white" />
+          Complete
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        variant="secondary"
+        size="sm"
+        className="whitespace-nowrap text-xs"
+        disabled
+      >
+        <Clock className="w-4 h-4 mr-1" />
+        Waiting
+      </Button>
+    );
   };
 
   return (
@@ -319,7 +582,9 @@ const Messages = () => {
                     className="w-full text-left p-4 bg-muted"
                     onClick={() => setSelectedConversation(selectedConversation)}
                   >
-                    <p className="font-semibold truncate">{conversationTitle}</p>
+                    <p className="font-semibold truncate">
+                      {conversationTitle}
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {listingLabel}
                     </p>
@@ -329,6 +594,7 @@ const Messages = () => {
                 {conversations.map((conversation) => {
                   const conversationId = getConversationId(conversation);
                   const active = conversationId === selectedConversationId;
+                  const status = getListingStatus(conversation);
 
                   return (
                     <button
@@ -339,12 +605,24 @@ const Messages = () => {
                         active ? "bg-muted" : ""
                       }`}
                     >
-                      <p className="font-semibold truncate">
-                        {getOtherUserName(conversation, currentUserId)}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {getListingTitle(conversation)}
-                      </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">
+                            {getOtherUserName(conversation, currentUserId)}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {getListingTitle(conversation)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`shrink-0 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${getStatusClass(
+                            status
+                          )}`}
+                        >
+                          {getStatusLabel(status)}
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -353,9 +631,23 @@ const Messages = () => {
           </aside>
 
           <section className="border rounded-2xl bg-background flex flex-col overflow-hidden">
-            <div className="border-b p-4">
-              <h2 className="font-bold text-foreground">{conversationTitle}</h2>
-              <p className="text-xs text-muted-foreground">{listingLabel}</p>
+            <div className="border-b p-4 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-bold text-foreground">
+                  {conversationTitle}
+                </h2>
+                <p className="text-xs text-muted-foreground">{listingLabel}</p>
+              </div>
+
+              {selectedConversation && (
+                <span
+                  className={`px-3 py-1 rounded-full border text-xs font-semibold ${getStatusClass(
+                    listingStatus
+                  )}`}
+                >
+                  {getStatusLabel(listingStatus)}
+                </span>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -374,12 +666,16 @@ const Messages = () => {
               ) : (
                 messages.map((message) => {
                   const mine = isMyMessage(message);
-                  const messageId = String(message.id || message.messageId || "");
+                  const messageId = String(
+                    message.id || message.messageId || ""
+                  );
 
                   return (
                     <div
                       key={messageId || message.createdAt}
-                      className={`flex ${mine ? "justify-end" : "justify-start"}`}
+                      className={`flex ${
+                        mine ? "justify-end" : "justify-start"
+                      }`}
                     >
                       <div className="group flex items-center gap-2 max-w-[75%]">
                         {mine && messageId && (
@@ -428,22 +724,7 @@ const Messages = () => {
                   <Send className="w-4 h-4" />
                 </Button>
 
-                <Button
-                  variant={completed ? "secondary" : "outline"}
-                  size="sm"
-                  className={`whitespace-nowrap text-xs ${
-                    completed ? "bg-green-600 text-white hover:bg-green-700" : ""
-                  }`}
-                  onClick={handleMarkComplete}
-                  disabled={!selectedConversationId || completed}
-                >
-                  <CheckCircle
-                    className={`w-4 h-4 mr-1 ${
-                      completed ? "text-white" : "text-muted-foreground"
-                    }`}
-                  />
-                  {completed ? "Completed" : "Mark Complete"}
-                </Button>
+                {renderStatusAction()}
               </div>
             </div>
           </section>
