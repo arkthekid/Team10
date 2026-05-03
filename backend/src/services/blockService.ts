@@ -87,3 +87,45 @@ export async function getBlockerIdsForUser(blockedId: string): Promise<string[]>
 
   return blocks.map((block) => block.blockerId);
 }
+
+// shared guard for conversation/message flows
+export async function areUsersBlocked(userAId: string, userBId: string): Promise<boolean> {
+  const blockRepo = AppDataSource.getRepository(Block);
+
+  const existing = await blockRepo.findOne({
+    where: [
+      { blockerId: userAId, blockedId: userBId },
+      { blockerId: userBId, blockedId: userAId },
+    ],
+  });
+
+  return !!existing;
+}
+
+export async function assertUsersNotBlocked(userAId: string, userBId: string) {
+  const blocked = await areUsersBlocked(userAId, userBId);
+
+  if (blocked) {
+    throw new AppError("You cannot interact with this user", 403);
+  }
+}
+
+export async function getBlockedUserIdsForUser(userId: string): Promise<string[]> {
+  const blockRepo = AppDataSource.getRepository(Block);
+
+  const blocks = await blockRepo.find({
+    where: [
+      { blockerId: userId },
+      { blockedId: userId },
+    ],
+  });
+
+  const blockedIds = new Set<string>();
+
+  for (const block of blocks) {
+    if (block.blockerId === userId) blockedIds.add(block.blockedId);
+    if (block.blockedId === userId) blockedIds.add(block.blockerId);
+  }
+
+  return [...blockedIds];
+}

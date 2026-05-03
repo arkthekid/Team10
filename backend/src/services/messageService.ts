@@ -2,6 +2,7 @@ import { AppDataSource } from "../config/data-source";
 import { Message } from "../entities/Message";
 import { Conversation } from "../entities/Conversation";
 import { AppError } from "../utils/AppError";
+import { assertUsersNotBlocked } from "./blockService";
 
 const messageRepo = () => AppDataSource.getRepository(Message);
 const conversationRepo = () => AppDataSource.getRepository(Conversation);
@@ -14,6 +15,10 @@ const assertMember = async (conversationId: string, userId: string) => {
   if (conversation.buyerId !== userId && conversation.sellerId !== userId) {
     throw new AppError("Unauthorized", 403);
   }
+
+  // block message access if either side blocked the other
+  await assertUsersNotBlocked(conversation.buyerId, conversation.sellerId);
+
   return conversation;
 };
 
