@@ -49,7 +49,17 @@ async function registerVerifyAndLogin(
   };
 }
 
-async function createListingForUser(token: string, overrides: Partial<any> = {}) {
+// helper to create a real category row for listing creation
+async function createCategory(name = "Clothing") {
+  const result = await AppDataSource.query(
+    `INSERT INTO "category_entity" ("name") VALUES ($1) RETURNING "categoryId", "name"`,
+    [name]
+  );
+
+  return result[0];
+}
+
+async function createListingForUser(token: string, categoryIds: string[],overrides: Partial<any> = {}) {
   const res = await request(app)
     .post("/api/listings")
     .set("Authorization", `Bearer ${token}`)
@@ -60,8 +70,7 @@ async function createListingForUser(token: string, overrides: Partial<any> = {})
       price: 50,
       condition: "Used",
       status: "available",
-      category: "clothing",
-      imageUrl: null,
+      categoryIds,
       ...overrides,
     });
 
@@ -91,7 +100,11 @@ describe("Report API", () => {
     await AppDataSource.query(`DELETE FROM "favorite"`);
     await AppDataSource.query(`DELETE FROM "block"`);
     await AppDataSource.query(`DELETE FROM "listing_image"`);
+    // clear listing-category join table before listings/categories
+    await AppDataSource.query(`DELETE FROM "listing_categories_category_entity"`);
     await AppDataSource.query(`DELETE FROM "listing"`);
+    // clear categories too since listing creation now depends on them
+    await AppDataSource.query(`DELETE FROM "category_entity"`);
     await AppDataSource.query(`DELETE FROM "user"`);
   });
 
@@ -126,7 +139,10 @@ describe("Report API", () => {
   it("POST /api/reports reports a listing successfully", async () => {
     const seller = await registerVerifyAndLogin(uniqueEmail(), "Seller");
     const reporter = await registerVerifyAndLogin(uniqueEmail(), "Reporter");
-    const listing = await createListingForUser(seller.token);
+    
+    // create a category and pass its id to listing creation
+    const category = await createCategory("Clothing");
+    const listing = await createListingForUser(seller.token, [category.categoryId]);
 
     const res = await request(app)
       .post("/api/reports")
@@ -164,7 +180,10 @@ describe("Report API", () => {
 
   it("POST /api/reports rejects reporting your own listing", async () => {
     const seller = await registerVerifyAndLogin(uniqueEmail(), "Seller");
-    const listing = await createListingForUser(seller.token);
+    
+    // create a category and pass its id to listing creation
+    const category = await createCategory("Clothing");
+    const listing = await createListingForUser(seller.token, [category.categoryId]);
 
     const res = await request(app)
       .post("/api/reports")
