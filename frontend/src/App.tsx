@@ -12,6 +12,7 @@ import BlockedUsers from "./pages/BlockedUsers";
 import MyListings from "./pages/MyListings";
 import NotFound from "./pages/NotFound";
 import VerifyEmail from "./pages/VerifyEmail";
+import SellerReviews from "./pages/SellerReviews";
 
 const App = () => {
   return (
@@ -23,6 +24,7 @@ const App = () => {
         <Route path="/browse" element={<Browse />} />
         <Route path="/listing/:id" element={<ListingDetail />} />
         <Route path="/listing/:id/edit" element={<EditListing />} />
+        <Route path="/seller/:sellerId/reviews" element={<SellerReviews />} />
         <Route path="/create" element={<CreateListing />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/favorites" element={<Favorites />} />

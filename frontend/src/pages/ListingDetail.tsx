@@ -10,6 +10,7 @@ import {
   Pencil,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import SafetyNotice from "@/components/SafetyNotice";
@@ -98,7 +99,6 @@ const getListingImages = (listing: any) => {
   ].filter(Boolean);
 
   const allImages = [...uploadedImages, ...singleImages];
-
   const uniqueImages = Array.from(new Set(allImages));
 
   return uniqueImages.length > 0 ? uniqueImages : [fallbackImage];
@@ -505,6 +505,14 @@ const ListingDetail = () => {
     }
   };
 
+  const handleViewSellerReviews = () => {
+    const sellerIdToView = getSellerId(listing);
+
+    if (isOwnListing || !sellerIdToView) return;
+
+    navigate(`/seller/${sellerIdToView}/reviews`);
+  };
+
   const handleMessageSeller = () => {
     if (isOwnListing) return;
     setShowSafetyNotice(true);
@@ -621,26 +629,41 @@ const ListingDetail = () => {
 
           <div className="flex items-center gap-2">
             {!isOwnListing && (
-              <button
-                type="button"
-                onClick={handleFavoriteToggle}
-                disabled={favoriteLoading}
-                className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
-                aria-label={
-                  isFavorited ? "Remove from favorites" : "Add to favorites"
-                }
-                title={
-                  isFavorited ? "Remove from favorites" : "Add to favorites"
-                }
-              >
-                <Heart
-                  className={`w-6 h-6 transition-colors ${
-                    isFavorited
-                      ? "fill-red-500 text-red-500"
-                      : "text-foreground"
-                  }`}
-                />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleFavoriteToggle}
+                  disabled={favoriteLoading}
+                  className="p-2 rounded-md hover:bg-muted disabled:opacity-60"
+                  aria-label={
+                    isFavorited ? "Remove from favorites" : "Add to favorites"
+                  }
+                  title={
+                    isFavorited ? "Remove from favorites" : "Add to favorites"
+                  }
+                >
+                  <Heart
+                    className={`w-6 h-6 transition-colors ${
+                      isFavorited
+                        ? "fill-red-500 text-red-500"
+                        : "text-foreground"
+                    }`}
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleViewSellerReviews}
+                  className="px-3 py-2 rounded-md hover:bg-muted text-sm font-medium"
+                  aria-label="See seller reviews"
+                  title="See seller reviews"
+                >
+                  <span className="hidden sm:inline">See Seller Reviews</span>
+                  <span className="sm:hidden">
+                    <MessageSquare className="w-5 h-5" />
+                  </span>
+                </button>
+              </>
             )}
 
             <div className="relative" ref={menuRef}>
