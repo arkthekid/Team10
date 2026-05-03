@@ -2,7 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Send, CheckCircle, Trash2, Clock, PackageCheck } from "lucide-react";
+import {
+  Send,
+  CheckCircle,
+  Trash2,
+  Clock,
+  PackageCheck,
+  Star,
+  MessageSquare,
+} from "lucide-react";
 import MarketplaceHeader from "@/components/MarketplaceHeader";
 import { toast } from "sonner";
 import { getCurrentUser } from "@/lib/authApi";
@@ -13,6 +21,7 @@ import {
   markConversationCompleted,
 } from "@/lib/conversationApi";
 import { getMessages, sendMessage, deleteMessage } from "@/lib/messageApi";
+import { createReview } from "@/lib/reviewApi";
 
 type ListingStatus = "available" | "sold_pending" | "completed";
 
@@ -100,17 +109,21 @@ const getConversationSellerId = (conversation: any) => {
   );
 };
 
+const getSellerName = (conversation: any) => {
+  return (
+    conversation?.seller?.name ||
+    conversation?.listing?.seller?.name ||
+    conversation?.sellerName ||
+    "Seller"
+  );
+};
+
 const getOtherUserName = (conversation: any, currentUserId: string) => {
   const buyerId = getConversationBuyerId(conversation);
   const sellerId = getConversationSellerId(conversation);
 
   if (currentUserId && currentUserId === buyerId) {
-    return (
-      conversation?.seller?.name ||
-      conversation?.listing?.seller?.name ||
-      conversation?.sellerName ||
-      "Seller"
-    );
+    return getSellerName(conversation);
   }
 
   if (currentUserId && currentUserId === sellerId) {
@@ -192,6 +205,14 @@ const updateConversationStatus = (
   };
 };
 
+const getReviewedSellerKey = (buyerId: string, sellerId: string) => {
+  return `reviewedSeller:${buyerId}:${sellerId}`;
+};
+
+const getSalePendingNoticeKey = (buyerId: string, conversationId: string) => {
+  return `salePendingNotice:${buyerId}:${conversationId}`;
+};
+
 const Messages = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -206,6 +227,24 @@ const Messages = () => {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+
+  const [showSalePendingNotice, setShowSalePendingNotice] = useState(false);
+
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewSellerId, setReviewSellerId] = useState("");
+  const [reviewSellerName, setReviewSellerName] = useState("Seller");
+  const [reviewConversationId, setReviewConversationId] = useState("");
+
+  const [reviewedSellerKeys, setReviewedSellerKeys] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("reviewedSellerKeys") || "[]");
+    } catch {
+      return [];
+    }
+  });
 
   const selectedConversationId = selectedConversation
     ? getConversationId(selectedConversation)
@@ -313,26 +352,46 @@ const Messages = () => {
     currentUserId !== selectedBuyerId;
 
   useEffect(() => {
-    if (!selectedConversation) return;
+    if (!selectedConversation || !currentUserId || !selectedConversationId) {
+      return;
+    }
 
-    console.log("MESSAGE ROLE CHECK:", {
+    const status = getListingStatus(selectedConversation);
+    const buyerId = getConversationBuyerId(selectedConversation);
+
+    if (status !== "sold_pending") return;
+    if (buyerId !== currentUserId) return;
+
+    const noticeKey = getSalePendingNoticeKey(
       currentUserId,
-      selectedBuyerId,
-      selectedSellerId,
-      isBuyer,
-      isSeller,
-      listingStatus,
-      selectedConversation,
+      selectedConversationId
+    );
+
+    const alreadyShown = localStorage.getItem(noticeKey);
+
+    if (!alreadyShown) {
+      setShowSalePendingNotice(true);
+      localStorage.setItem(noticeKey, "true");
+    }
+  }, [selectedConversation, currentUserId, selectedConversationId]);
+
+  const reviewThreads = useMemo(() => {
+    if (!currentUserId) return [];
+
+    return conversations.filter((conversation) => {
+      const status = getListingStatus(conversation);
+      const buyerId = getConversationBuyerId(conversation);
+      const sellerId = getConversationSellerId(conversation);
+      const key = getReviewedSellerKey(currentUserId, sellerId);
+
+      return (
+        status === "completed" &&
+        buyerId === currentUserId &&
+        sellerId &&
+        !reviewedSellerKeys.includes(key)
+      );
     });
-  }, [
-    currentUserId,
-    selectedBuyerId,
-    selectedSellerId,
-    isBuyer,
-    isSeller,
-    listingStatus,
-    selectedConversation,
-  ]);
+  }, [conversations, currentUserId, reviewedSellerKeys]);
 
   const handleSend = async () => {
     if (!input.trim() || !selectedConversationId || sending) return;
@@ -422,6 +481,25 @@ const Messages = () => {
     }
   };
 
+  const openReviewModal = (conversation: any) => {
+    if (!conversation) return;
+
+    const buyerId = getConversationBuyerId(conversation);
+    const sellerId = getConversationSellerId(conversation);
+
+    if (buyerId !== currentUserId) {
+      toast.error("Only the buyer can review the seller.");
+      return;
+    }
+
+    setReviewSellerId(sellerId);
+    setReviewSellerName(getSellerName(conversation));
+    setReviewConversationId(getConversationId(conversation));
+    setReviewRating(5);
+    setReviewComment("");
+    setShowReviewModal(true);
+  };
+
   const handleMarkComplete = async () => {
     if (!selectedConversationId || statusUpdating || !isBuyer) {
       toast.error("Only the buyer can mark this transaction as complete.");
@@ -439,13 +517,72 @@ const Messages = () => {
       );
 
       syncUpdatedConversation("completed", updatedListing);
-      toast.success("Transaction marked complete");
+      toast.success(
+        "Transaction marked complete. A review request has been added to your messages."
+      );
     } catch (err: any) {
       console.error("MARK COMPLETE ERROR:", err);
       toast.error(err.message || "Failed to mark complete");
     } finally {
       setStatusUpdating(false);
     }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewSellerId) {
+      toast.error("Seller information not found");
+      return;
+    }
+
+    if (!reviewComment.trim()) {
+      toast.error("Please write a short review before submitting");
+      return;
+    }
+
+    try {
+      setReviewSubmitting(true);
+
+      await createReview(reviewSellerId, {
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+      });
+
+      const key = getReviewedSellerKey(currentUserId, reviewSellerId);
+      const updatedKeys = Array.from(new Set([...reviewedSellerKeys, key]));
+
+      setReviewedSellerKeys(updatedKeys);
+      localStorage.setItem("reviewedSellerKeys", JSON.stringify(updatedKeys));
+
+      toast.success("Review submitted successfully");
+      setShowReviewModal(false);
+      setReviewRating(5);
+      setReviewComment("");
+      setReviewSellerId("");
+      setReviewSellerName("Seller");
+      setReviewConversationId("");
+    } catch (err: any) {
+      console.error("SUBMIT REVIEW ERROR:", err);
+      toast.error(err.message || "Failed to submit review");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const handleSkipReview = () => {
+    if (reviewSellerId) {
+      const key = getReviewedSellerKey(currentUserId, reviewSellerId);
+      const updatedKeys = Array.from(new Set([...reviewedSellerKeys, key]));
+
+      setReviewedSellerKeys(updatedKeys);
+      localStorage.setItem("reviewedSellerKeys", JSON.stringify(updatedKeys));
+    }
+
+    setShowReviewModal(false);
+    setReviewRating(5);
+    setReviewComment("");
+    setReviewSellerId("");
+    setReviewSellerName("Seller");
+    setReviewConversationId("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -576,6 +713,39 @@ const Messages = () => {
               </p>
             ) : (
               <div className="divide-y">
+                {reviewThreads.map((conversation) => {
+                  const conversationId = getConversationId(conversation);
+                  const sellerName = getSellerName(conversation);
+                  const listingTitle = getListingTitle(conversation);
+                  const active = reviewConversationId === conversationId;
+
+                  return (
+                    <button
+                      type="button"
+                      key={`review-${conversationId}`}
+                      onClick={() => openReviewModal(conversation)}
+                      className={`w-full text-left p-4 hover:bg-muted ${
+                        active ? "bg-muted" : "bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 rounded-full bg-primary/10 p-2">
+                          <MessageSquare className="w-4 h-4 text-primary" />
+                        </div>
+
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">
+                            Review Seller
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Rate {sellerName} for {listingTitle}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+
                 {selectedConversation && listingId && (
                   <button
                     type="button"
@@ -730,6 +900,100 @@ const Messages = () => {
           </section>
         </div>
       </main>
+
+      {showSalePendingNotice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-background border shadow-xl p-6">
+            <h3 className="text-xl font-bold mb-3">Congratulations!</h3>
+
+            <p className="text-sm text-muted-foreground leading-6 mb-6">
+              The seller has marked this item as sale pending for you. Once you
+              receive the item, please return to this chat and mark the
+              transaction as complete.
+            </p>
+
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => setShowSalePendingNotice(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-background border shadow-xl p-6">
+            <h3 className="text-xl font-bold mb-2">Review Seller</h3>
+
+            <p className="text-sm text-muted-foreground leading-6 mb-5">
+              Please rate your experience with{" "}
+              <span className="font-semibold text-foreground">
+                {reviewSellerName}
+              </span>
+              . Your review will appear on this seller&apos;s listings.
+            </p>
+
+            <div className="mb-5">
+              <label className="block text-sm font-medium mb-2">Rating</label>
+
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setReviewRating(value)}
+                    className="p-1"
+                    aria-label={`${value} star rating`}
+                  >
+                    <Star
+                      className={`w-8 h-8 ${
+                        value <= reviewRating
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Review</label>
+
+              <textarea
+                value={reviewComment}
+                onChange={(e) => setReviewComment(e.target.value)}
+                className="w-full min-h-28 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Write a short review about the seller."
+              />
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handleSkipReview}
+                disabled={reviewSubmitting}
+              >
+                Skip
+              </Button>
+
+              <Button
+                type="button"
+                className="w-full"
+                onClick={handleSubmitReview}
+                disabled={reviewSubmitting}
+              >
+                {reviewSubmitting ? "Submitting..." : "Submit Review"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
