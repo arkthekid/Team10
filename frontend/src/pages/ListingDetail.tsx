@@ -49,6 +49,35 @@ const formatCategory = (value: any) => {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
+const getListingStatus = (listing: any) => {
+  const status = String(listing?.status || "available").toLowerCase();
+
+  if (status === "sold_pending" || status === "pending") return "sold_pending";
+  if (status === "completed" || status === "complete" || status === "sold") {
+    return "completed";
+  }
+
+  return "available";
+};
+
+const getStatusLabel = (status: string) => {
+  if (status === "sold_pending") return "Sale Pending";
+  if (status === "completed") return "Complete";
+  return "Available";
+};
+
+const getStatusClass = (status: string) => {
+  if (status === "sold_pending") {
+    return "bg-yellow-100 text-yellow-800 border-yellow-200";
+  }
+
+  if (status === "completed") {
+    return "bg-green-100 text-green-800 border-green-200";
+  }
+
+  return "bg-blue-100 text-blue-800 border-blue-200";
+};
+
 const getListingId = (listing: any) => {
   return String(
     listing?.listingId ||
@@ -575,6 +604,8 @@ const ListingDetail = () => {
       ? null
       : Number(listing.price);
 
+  const listingStatus = getListingStatus(listing);
+
   const location =
     localMetadata.pickUpLocation ||
     (typeof listing.pickUpLocation === "string"
@@ -773,14 +804,24 @@ const ListingDetail = () => {
           <div>
             <h1 className="text-4xl font-bold mb-2">{title}</h1>
 
-            <p className="text-2xl font-bold text-primary mb-6">
-              {price === null || Number(price) === 0
-                ? "FREE"
-                : `$${price.toLocaleString(undefined, {
-                    minimumFractionDigits: price % 1 === 0 ? 0 : 2,
-                    maximumFractionDigits: 2,
-                  })}`}
-            </p>
+            <div className="flex items-center gap-3 mb-6">
+              <p className="text-2xl font-bold text-primary">
+                {price === null || Number(price) === 0
+                  ? "FREE"
+                  : `$${price.toLocaleString(undefined, {
+                      minimumFractionDigits: price % 1 === 0 ? 0 : 2,
+                      maximumFractionDigits: 2,
+                    })}`}
+              </p>
+
+              <span
+                className={`px-3 py-1 rounded-full border text-xs font-semibold ${getStatusClass(
+                  listingStatus
+                )}`}
+              >
+                {getStatusLabel(listingStatus)}
+              </span>
+            </div>
 
             <div className="space-y-3 text-base mb-6">
               <p>
@@ -827,10 +868,16 @@ const ListingDetail = () => {
 
             <Button
               onClick={handleMessageSeller}
-              disabled={isOwnListing}
+              disabled={isOwnListing || listingStatus !== "available"}
               className="w-full h-14 text-lg"
             >
-              {isOwnListing ? "Your Listing" : "Message Seller"}
+              {isOwnListing
+                ? "Your Listing"
+                : listingStatus === "sold_pending"
+                ? "Sale Pending"
+                : listingStatus === "completed"
+                ? "Complete"
+                : "Message Seller"}
             </Button>
           </div>
         </div>
