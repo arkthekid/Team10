@@ -2,7 +2,11 @@ import { AppDataSource } from "../config/data-source";
 import { Conversation } from "../entities/Conversation";
 import { Listing } from "../entities/Listing";
 import { AppError } from "../utils/AppError";
-
+import {
+  assertUsersNotBlocked,
+  areUsersBlocked,
+  getBlockedUserIdsForUser,
+} from "./blockService";
 const conversationRepo = () => AppDataSource.getRepository(Conversation);
 const listingRepo = () => AppDataSource.getRepository(Listing);
 
@@ -13,6 +17,9 @@ export const startConversation = async (listingId: string, buyerId: string) => {
   if (listing.sellerId === buyerId) {
     throw new AppError("You cannot message yourself", 400);
   }
+
+  // stop conversation creation if either side blocked the other
+  await assertUsersNotBlocked(buyerId, listing.sellerId);
 
   const existing = await conversationRepo().findOne({
     where: { listingId, buyerId },
@@ -30,7 +37,7 @@ export const startConversation = async (listingId: string, buyerId: string) => {
 };
 
 export const getConversationsForListing = async (listingId: string, userId: string) => {
-  return conversationRepo().find({
+  const conversations = await conversationRepo().find({
     where: [
       { listingId, sellerId: userId },
       { listingId, buyerId: userId },
@@ -38,6 +45,17 @@ export const getConversationsForListing = async (listingId: string, userId: stri
     relations: ["buyer", "seller", "listing"],
     order: { updatedAt: "DESC" },
   });
+
+  // hide conversations where either side has blocked the other
+  const filtered: Conversation[] = [];
+  for (const conversation of conversations) {
+    const blocked = await areUsersBlocked(conversation.buyerId, conversation.sellerId);
+    if (!blocked) {
+      filtered.push(conversation);
+    }
+  }
+
+  return filtered;
 };
 
 export const getConversationById = async (conversationId: string, userId: string) => {
@@ -52,6 +70,9 @@ export const getConversationById = async (conversationId: string, userId: string
     throw new AppError("Unauthorized", 403);
   }
 
+  // prevent access if either side has blocked the other
+  await assertUsersNotBlocked(conversation.buyerId, conversation.sellerId);
+
   return conversation;
 };
 
@@ -62,7 +83,17 @@ export const getMyConversations = async (userId: string) => {
     order: { updatedAt: "DESC" },
   });
 
-  return conversations.map((conv) => ({
+  // gather all blocked users in either direction relative to this user
+  const blockedUserIds = await getBlockedUserIdsForUser(userId);
+
+  // hide blocked conversations from conversation list
+  return conversations
+    .filter(
+      (conv) =>
+        !blockedUserIds.includes(conv.buyerId) &&
+        !blockedUserIds.includes(conv.sellerId)
+    )
+    .map((conv) => ({
     ...conv,
     listingStatus: conv.listing?.status ?? null,
   }));
@@ -79,6 +110,9 @@ export async function getConversationStatus(conversationId: string, userId: stri
   if (conversation.buyerId !== userId && conversation.sellerId !== userId) {
     throw new AppError("Unauthorized", 403);
   }
+
+  // prevent status access if users are blocked
+  await assertUsersNotBlocked(conversation.buyerId, conversation.sellerId);
 
   return {
     conversationId: conversation.conversationId,
@@ -129,6 +163,9 @@ export async function markAsReceived(conversationId: string, userId: string) {
     relations: ["listing"],
   });
   if (!conversation) throw new AppError("Conversation not found");
+
+  // prevent buyer flow if users are blocked
+  await assertUsersNotBlocked(conversation.buyerId, conversation.sellerId);
 
   if (!conversation.listing) throw new AppError("Listing not found");
   if (conversation.listing.buyerId != userId) throw new AppError("Only the buyer can mark a listing as received");
