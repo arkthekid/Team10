@@ -16,20 +16,12 @@ const Index = () => {
             A one stop solution to buy and sell items.
           </p>
 
-          <div className="max-w-xl mx-auto space-y-6">
+          <div className="max-w-xl mx-auto">
             <Button
               onClick={() => navigate("/login")}
               className="w-full h-16 text-2xl font-semibold"
             >
-              Login
-            </Button>
-
-            <Button
-              onClick={() => navigate("/register")}
-              variant="outline"
-              className="w-full h-16 text-2xl font-semibold"
-            >
-              Register
+              Login with Google
             </Button>
           </div>
         </div>
