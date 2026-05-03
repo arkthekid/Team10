@@ -2,6 +2,7 @@ import { AppDataSource } from "../config/data-source";
 import { AppError } from "../utils/AppError";
 import { Favorite } from "../entities/Favorite";
 import { Listing } from "../entities/Listing";
+import { assertUsersNotBlocked, areUsersBlocked } from "./blockService";
 
 export async function addFavorite(userId: string, listingId: string) {
   const favoriteRepo = AppDataSource.getRepository(Favorite);
@@ -28,6 +29,9 @@ export async function addFavorite(userId: string, listingId: string) {
     throw new AppError("Cannot favorite your listing", 409);
   }
 
+  // do not allow favorites between blocked users
+  await assertUsersNotBlocked(userId, listing.sellerId);
+
   const favorite = favoriteRepo.create({
     userId,
     listingId,
@@ -50,7 +54,19 @@ export async function getMyFavorites(userId: string) {
     order: { createdAt: "DESC" },
   });
 
-  return favorites.map((favorite) => favorite.listing);
+  // hide favorites if the listing owner is blocked in either direction
+  const visibleFavorites = [];
+
+  for (const favorite of favorites) {
+    if (!favorite.listing) continue;
+
+    const blocked = await areUsersBlocked(userId, favorite.listing.sellerId);
+    if (!blocked) {
+      visibleFavorites.push(favorite.listing);
+    }
+  }
+
+  return visibleFavorites;
 }
 
 export async function removeFavorite(userId: string, listingId: string) {
