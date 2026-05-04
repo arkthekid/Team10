@@ -8,6 +8,12 @@ jest.mock("../../src/config/data-source", () => ({
   },
 }));
 
+jest.mock("../../src/services/blockService", () => ({
+  assertUsersNotBlocked: jest.fn().mockResolvedValue(undefined),
+  areUsersBlocked: jest.fn().mockResolvedValue(false),
+  getBlockerIdsForUser: jest.fn().mockResolvedValue([]),
+}));
+
 describe("favoriteService", () => {
   const mockFavoriteRepo = {
     findOne: jest.fn(),
@@ -21,12 +27,17 @@ describe("favoriteService", () => {
     findOne: jest.fn(),
   };
 
+  const mockBlockRepo = {
+    findOne: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
 
     (AppDataSource.getRepository as jest.Mock).mockImplementation((entity: any) => {
       if (entity?.name === "Favorite") return mockFavoriteRepo;
       if (entity?.name === "Listing") return mockListingRepo;
+      if (entity?.name === "Block") return mockBlockRepo;
       return null;
     });
   });
@@ -55,6 +66,7 @@ describe("favoriteService", () => {
       });
       expect(mockFavoriteRepo.findOne).toHaveBeenCalledWith({
         where: { userId: "user-123", listingId: "listing-123" },
+        relations: ["listing"],
       });
       expect(mockFavoriteRepo.create).toHaveBeenCalled();
       expect(mockFavoriteRepo.save).toHaveBeenCalled();
