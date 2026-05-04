@@ -61,10 +61,21 @@ const getListingCategory = (listing: any) => {
     return normalizeCategoryName(listing.category);
   }
 
-  if (listing.category?.name) return normalizeCategoryName(listing.category.name);
-  if (listing.category?.label) return normalizeCategoryName(listing.category.label);
-  if (listing.category?.value) return normalizeCategoryName(listing.category.value);
-  if (listing.categoryId?.name) return normalizeCategoryName(listing.categoryId.name);
+  if (listing.category?.name) {
+    return normalizeCategoryName(listing.category.name);
+  }
+
+  if (listing.category?.label) {
+    return normalizeCategoryName(listing.category.label);
+  }
+
+  if (listing.category?.value) {
+    return normalizeCategoryName(listing.category.value);
+  }
+
+  if (listing.categoryId?.name) {
+    return normalizeCategoryName(listing.categoryId.name);
+  }
 
   return "Uncategorized";
 };
@@ -87,7 +98,9 @@ const getListingLocation = (listing: any) => {
 const getListingStatus = (listing: any) => {
   const status = String(listing?.status || "available").toLowerCase();
 
-  if (status === "sold_pending" || status === "pending") return "sold_pending";
+  if (status === "sold_pending" || status === "pending") {
+    return "sold_pending";
+  }
 
   if (status === "completed" || status === "complete" || status === "sold") {
     return "completed";
@@ -288,6 +301,7 @@ const Browse = () => {
         <div className="flex flex-col sm:flex-row gap-3 mb-6 items-stretch">
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+
             <Input
               placeholder="Search Marketplace"
               value={search}
@@ -309,13 +323,13 @@ const Browse = () => {
 
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger className="w-full sm:w-44 h-11">
-              <SelectValue placeholder="All" />
+              <SelectValue placeholder="All categories" />
             </SelectTrigger>
 
             <SelectContent>
               {categories.map((categoryName) => (
                 <SelectItem key={categoryName} value={categoryName}>
-                  {categoryName}
+                  {categoryName === "All" ? "All categories" : categoryName}
                 </SelectItem>
               ))}
             </SelectContent>
