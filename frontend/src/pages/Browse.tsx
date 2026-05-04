@@ -85,12 +85,13 @@ const getListingLocation = (listing: any) => {
   const localMetadata = getLocalListingMetadata(listingId);
 
   return (
-    localMetadata.pickUpLocation ||
     (typeof listing.pickUpLocation === "string"
       ? listing.pickUpLocation
       : listing.pickUpLocation?.name) ||
+    listing.pickUpLocationName ||
     listing.location ||
     listing.pickupLocation ||
+    localMetadata.pickUpLocation ||
     ""
   );
 };
@@ -119,6 +120,15 @@ const getListingUpdatedTime = (listing: any) => {
   const time = new Date(dateValue).getTime();
 
   return Number.isNaN(time) ? 0 : time;
+};
+
+const getListingPrice = (listing: any) => {
+  const price =
+    listing.price === null || listing.price === undefined
+      ? 0
+      : Number(listing.price);
+
+  return Number.isNaN(price) ? 0 : price;
 };
 
 const normalizeListings = (data: any) => {
@@ -250,19 +260,14 @@ const Browse = () => {
     return ["All", ...names];
   }, [categoryOptions, visibleListings]);
 
-  const filtered = visibleListings
-    .filter((listing) => {
+  const filtered = useMemo(() => {
+    let result = visibleListings.filter((listing) => {
       const title = (listing.title || listing.name || "").toLowerCase();
       const description = (listing.description || "").toLowerCase();
       const location = getListingLocation(listing).toLowerCase();
 
       const listingCategory = getListingCategory(listing);
-
-      const price =
-        listing.price === null || listing.price === undefined
-          ? 0
-          : Number(listing.price);
-
+      const price = getListingPrice(listing);
       const searchValue = search.toLowerCase();
 
       const matchSearch =
@@ -274,6 +279,8 @@ const Browse = () => {
 
       const matchPrice =
         priceFilter === "all" ||
+        priceFilter === "priceLowHigh" ||
+        priceFilter === "priceHighLow" ||
         (priceFilter === "free" && price === 0) ||
         (priceFilter === "under20" && price > 0 && price < 20) ||
         (priceFilter === "under50" && price > 0 && price < 50) ||
@@ -281,8 +288,25 @@ const Browse = () => {
         (priceFilter === "over100" && price >= 100);
 
       return matchSearch && matchCategory && matchPrice;
-    })
-    .sort((a, b) => {
+    });
+
+    if (priceFilter === "priceLowHigh") {
+      result = [...result].sort(
+        (a, b) => getListingPrice(a) - getListingPrice(b)
+      );
+
+      return result;
+    }
+
+    if (priceFilter === "priceHighLow") {
+      result = [...result].sort(
+        (a, b) => getListingPrice(b) - getListingPrice(a)
+      );
+
+      return result;
+    }
+
+    result = [...result].sort((a, b) => {
       const aTime = getListingUpdatedTime(a);
       const bTime = getListingUpdatedTime(b);
 
@@ -292,6 +316,9 @@ const Browse = () => {
 
       return bTime - aTime;
     });
+
+    return result;
+  }, [visibleListings, search, category, priceFilter, sortOrder]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -336,7 +363,7 @@ const Browse = () => {
           </Select>
 
           <Select value={priceFilter} onValueChange={setPriceFilter}>
-            <SelectTrigger className="w-full sm:w-36 h-11">
+            <SelectTrigger className="w-full sm:w-44 h-11">
               <SelectValue />
             </SelectTrigger>
 
@@ -347,6 +374,8 @@ const Browse = () => {
               <SelectItem value="under50">Under $50</SelectItem>
               <SelectItem value="under100">Under $100</SelectItem>
               <SelectItem value="over100">Above $100</SelectItem>
+              <SelectItem value="priceLowHigh">Price: Low to High</SelectItem>
+              <SelectItem value="priceHighLow">Price: High to Low</SelectItem>
             </SelectContent>
           </Select>
 
