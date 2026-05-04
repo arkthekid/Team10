@@ -24,6 +24,7 @@ import { getMessages, sendMessage, deleteMessage } from "@/lib/messageApi";
 import { createReview } from "@/lib/reviewApi";
 
 type ListingStatus = "available" | "sold_pending" | "completed";
+type ConversationView = "buying" | "selling";
 
 const getUserFromResponse = (data: any) => {
   return data?.user || data?.data?.user || data?.data || data || {};
@@ -146,6 +147,7 @@ const getListingStatus = (conversation: any): ListingStatus => {
     "available";
 
   if (status === "sold_pending" || status === "pending") return "sold_pending";
+
   if (status === "completed" || status === "complete" || status === "sold") {
     return "completed";
   }
@@ -218,6 +220,9 @@ const Messages = () => {
   const params = new URLSearchParams(location.search);
   const listingId = params.get("listingId");
 
+  const [conversationView, setConversationView] =
+    useState<ConversationView>("buying");
+
   const [currentUserId, setCurrentUserId] = useState("");
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
@@ -250,6 +255,25 @@ const Messages = () => {
     ? getConversationId(selectedConversation)
     : "";
 
+  const buyingConversations = useMemo(() => {
+    if (!currentUserId) return [];
+
+    return conversations.filter((conversation) => {
+      return getConversationBuyerId(conversation) === currentUserId;
+    });
+  }, [conversations, currentUserId]);
+
+  const sellingConversations = useMemo(() => {
+    if (!currentUserId) return [];
+
+    return conversations.filter((conversation) => {
+      return getConversationSellerId(conversation) === currentUserId;
+    });
+  }, [conversations, currentUserId]);
+
+  const visibleConversations =
+    conversationView === "buying" ? buyingConversations : sellingConversations;
+
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -263,6 +287,7 @@ const Messages = () => {
           const started = await startConversation(listingId);
           const conversation = normalizeStartedConversation(started);
 
+          setConversationView("buying");
           setSelectedConversation(conversation);
 
           const allConversations = await getConversations().catch(() => []);
@@ -273,7 +298,22 @@ const Messages = () => {
 
           setConversations(normalized);
 
-          if (normalized.length > 0) {
+          const firstBuyingConversation = normalized.find(
+            (conversation: any) => getConversationBuyerId(conversation) === userId
+          );
+
+          const firstSellingConversation = normalized.find(
+            (conversation: any) =>
+              getConversationSellerId(conversation) === userId
+          );
+
+          if (firstBuyingConversation) {
+            setConversationView("buying");
+            setSelectedConversation(firstBuyingConversation);
+          } else if (firstSellingConversation) {
+            setConversationView("selling");
+            setSelectedConversation(firstSellingConversation);
+          } else if (normalized.length > 0) {
             setSelectedConversation(normalized[0]);
           }
         }
@@ -287,6 +327,28 @@ const Messages = () => {
 
     loadInitialData();
   }, [listingId]);
+
+  useEffect(() => {
+    if (!currentUserId || loading) return;
+
+    const selectedId = selectedConversation
+      ? getConversationId(selectedConversation)
+      : "";
+
+    const stillVisible = visibleConversations.some(
+      (conversation) => getConversationId(conversation) === selectedId
+    );
+
+    if (!stillVisible) {
+      setSelectedConversation(visibleConversations[0] || null);
+    }
+  }, [
+    conversationView,
+    currentUserId,
+    loading,
+    visibleConversations,
+    selectedConversation,
+  ]);
 
   useEffect(() => {
     let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -395,7 +457,7 @@ const Messages = () => {
   }, [selectedConversation, currentUserId, selectedConversationId]);
 
   const reviewThreads = useMemo(() => {
-    if (!currentUserId) return [];
+    if (!currentUserId || conversationView !== "buying") return [];
 
     return conversations.filter((conversation) => {
       const status = getListingStatus(conversation);
@@ -410,7 +472,7 @@ const Messages = () => {
         !reviewedSellerKeys.includes(key)
       );
     });
-  }, [conversations, currentUserId, reviewedSellerKeys]);
+  }, [conversations, currentUserId, reviewedSellerKeys, conversationView]);
 
   const handleSend = async () => {
     if (!input.trim() || !selectedConversationId || sending) return;
@@ -698,17 +760,7 @@ const Messages = () => {
       );
     }
 
-    return (
-      <Button
-        variant="secondary"
-        size="sm"
-        className="whitespace-nowrap text-xs"
-        disabled
-      >
-        <Clock className="w-4 h-4 mr-1" />
-        Waiting
-      </Button>
-    );
+    return null;
   };
 
   return (
@@ -719,16 +771,44 @@ const Messages = () => {
         <div className="grid md:grid-cols-[280px_1fr] gap-4 min-h-[calc(100vh-140px)]">
           <aside className="border rounded-2xl bg-card overflow-hidden">
             <div className="p-4 border-b">
-              <h2 className="font-bold text-lg">Messages</h2>
+              <h2 className="font-bold text-lg mb-3">Messages</h2>
+
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted p-1">
+                <button
+                  type="button"
+                  onClick={() => setConversationView("buying")}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
+                    conversationView === "buying"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Buying
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConversationView("selling")}
+                  className={`rounded-md px-3 py-2 text-xs font-semibold transition-colors ${
+                    conversationView === "selling"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Selling
+                </button>
+              </div>
             </div>
 
             {loading ? (
               <p className="p-4 text-sm text-muted-foreground">
                 Loading conversations...
               </p>
-            ) : conversations.length === 0 && !selectedConversation ? (
+            ) : visibleConversations.length === 0 &&
+              reviewThreads.length === 0 ? (
               <p className="p-4 text-sm text-muted-foreground">
-                No conversations yet.
+                No {conversationView === "buying" ? "buying" : "selling"}{" "}
+                conversations yet.
               </p>
             ) : (
               <div className="divide-y">
@@ -765,7 +845,7 @@ const Messages = () => {
                   );
                 })}
 
-                {conversations.map((conversation) => {
+                {visibleConversations.map((conversation) => {
                   const conversationId = getConversationId(conversation);
                   const active = conversationId === selectedConversationId;
                   const status = getListingStatus(conversation);
