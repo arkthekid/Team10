@@ -289,26 +289,45 @@ const Messages = () => {
   }, [listingId]);
 
   useEffect(() => {
-    async function loadMessages() {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    async function loadMessages(showLoading = false) {
       if (!selectedConversationId) {
         setMessages([]);
         return;
       }
 
       try {
-        setMessagesLoading(true);
+        if (showLoading) {
+          setMessagesLoading(true);
+        }
 
         const data = await getMessages(selectedConversationId);
         setMessages(normalizeMessages(data));
       } catch (err: any) {
         console.error("LOAD MESSAGES ERROR:", err);
-        toast.error(err.message || "Failed to load conversation messages");
+
+        if (showLoading) {
+          toast.error(err.message || "Failed to load conversation messages");
+        }
       } finally {
-        setMessagesLoading(false);
+        if (showLoading) {
+          setMessagesLoading(false);
+        }
       }
     }
 
-    loadMessages();
+    loadMessages(true);
+
+    intervalId = setInterval(() => {
+      loadMessages(false);
+    }, 3000);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, [selectedConversationId]);
 
   const conversationTitle = useMemo(() => {
