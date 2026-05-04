@@ -67,7 +67,7 @@ export async function getListings(query: GetListingDto, currentUserId: string) {
   );
 
   // const page = query.page || 1;
-  // const limit = query.limit || 10;
+  // const limit = query.limit || 9;
 
   // qb.skip((page - 1) * limit).take(limit);
 
