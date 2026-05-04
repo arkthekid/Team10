@@ -173,11 +173,83 @@ const getStatusClass = (status: ListingStatus) => {
   return "bg-blue-100 text-blue-800 border-blue-200";
 };
 
+const getLastMessage = (conversation: any) => {
+  return (
+    conversation?.lastMessage ||
+    conversation?.latestMessage ||
+    conversation?.conversation?.lastMessage ||
+    conversation?.conversation?.latestMessage ||
+    null
+  );
+};
+
+const getLastMessageSenderId = (conversation: any) => {
+  const lastMessage = getLastMessage(conversation);
+
+  return String(
+    lastMessage?.senderId ||
+      lastMessage?.sender?.id ||
+      lastMessage?.sender?.userId ||
+      lastMessage?.userId ||
+      ""
+  );
+};
+
+const getConversationLastActivityTime = (conversation: any) => {
+  const rawTime =
+    conversation?.lastMessage?.createdAt ||
+    conversation?.lastMessage?.updatedAt ||
+    conversation?.latestMessage?.createdAt ||
+    conversation?.latestMessage?.updatedAt ||
+    conversation?.lastMessageAt ||
+    conversation?.latestMessageAt ||
+    conversation?.messageCreatedAt ||
+    conversation?.updatedAt ||
+    conversation?.createdAt ||
+    conversation?.conversation?.lastMessage?.createdAt ||
+    conversation?.conversation?.latestMessage?.createdAt ||
+    conversation?.conversation?.lastMessageAt ||
+    conversation?.conversation?.latestMessageAt ||
+    conversation?.conversation?.updatedAt ||
+    conversation?.conversation?.createdAt ||
+    "";
+
+  const time = new Date(rawTime).getTime();
+
+  return Number.isNaN(time) ? 0 : time;
+};
+
+const sortConversationsByLastActivity = (list: any[]) => {
+  return [...list].sort(
+    (a, b) =>
+      getConversationLastActivityTime(b) - getConversationLastActivityTime(a)
+  );
+};
+
+const hasUnreadMessage = (
+  conversation: any,
+  currentUserId: string,
+  selectedConversationId: string
+) => {
+  const conversationId = getConversationId(conversation);
+
+  if (conversationId === selectedConversationId) return false;
+
+  const senderId = getLastMessageSenderId(conversation);
+
+  return !!senderId && !!currentUserId && senderId !== currentUserId;
+};
+
 const normalizeConversations = (data: any) => {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data.conversations)) return data.conversations;
-  if (Array.isArray(data.data)) return data.data;
-  return [];
+  const conversations = Array.isArray(data)
+    ? data
+    : Array.isArray(data.conversations)
+    ? data.conversations
+    : Array.isArray(data.data)
+    ? data.data
+    : [];
+
+  return sortConversationsByLastActivity(conversations);
 };
 
 const normalizeMessages = (data: any) => {
@@ -271,8 +343,12 @@ const Messages = () => {
     });
   }, [conversations, currentUserId]);
 
-  const visibleConversations =
-    conversationView === "buying" ? buyingConversations : sellingConversations;
+  const visibleConversations = useMemo(() => {
+    const list =
+      conversationView === "buying" ? buyingConversations : sellingConversations;
+
+    return sortConversationsByLastActivity(list);
+  }, [conversationView, buyingConversations, sellingConversations]);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -365,7 +441,54 @@ const Messages = () => {
         }
 
         const data = await getMessages(selectedConversationId);
-        setMessages(normalizeMessages(data));
+        const normalizedMessages = normalizeMessages(data);
+
+        setMessages(normalizedMessages);
+
+        const lastMessage = normalizedMessages[normalizedMessages.length - 1];
+
+        if (lastMessage) {
+          const lastMessageTime =
+            lastMessage?.createdAt ||
+            lastMessage?.updatedAt ||
+            lastMessage?.created_at ||
+            "";
+
+          setConversations((prev) =>
+            sortConversationsByLastActivity(
+              prev.map((conversation) => {
+                if (getConversationId(conversation) !== selectedConversationId) {
+                  return conversation;
+                }
+
+                return {
+                  ...conversation,
+                  lastMessage,
+                  lastMessageAt:
+                    lastMessageTime ||
+                    conversation?.lastMessageAt ||
+                    conversation?.updatedAt,
+                  updatedAt:
+                    lastMessageTime ||
+                    conversation?.updatedAt ||
+                    conversation?.createdAt,
+                };
+              })
+            )
+          );
+
+          setSelectedConversation((prev: any) => {
+            if (!prev) return prev;
+
+            return {
+              ...prev,
+              lastMessage,
+              lastMessageAt:
+                lastMessageTime || prev?.lastMessageAt || prev?.updatedAt,
+              updatedAt: lastMessageTime || prev?.updatedAt || prev?.createdAt,
+            };
+          });
+        }
       } catch (err: any) {
         console.error("LOAD MESSAGES ERROR:", err);
 
@@ -486,7 +609,40 @@ const Messages = () => {
       const newMessage =
         sent?.message || sent?.data?.message || sent?.data || sent;
 
+      const now = new Date().toISOString();
+      const newMessageTime =
+        newMessage?.createdAt || newMessage?.updatedAt || now;
+
       setMessages((prev) => [...prev, newMessage]);
+
+      setConversations((prev) =>
+        sortConversationsByLastActivity(
+          prev.map((conversation) => {
+            if (getConversationId(conversation) !== selectedConversationId) {
+              return conversation;
+            }
+
+            return {
+              ...conversation,
+              lastMessage: newMessage,
+              lastMessageAt: newMessageTime,
+              updatedAt: newMessageTime,
+            };
+          })
+        )
+      );
+
+      setSelectedConversation((prev: any) => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          lastMessage: newMessage,
+          lastMessageAt: newMessageTime,
+          updatedAt: newMessageTime,
+        };
+      });
+
       setInput("");
     } catch (err: any) {
       console.error("SEND MESSAGE ERROR:", err);
@@ -526,13 +682,15 @@ const Messages = () => {
     });
 
     setConversations((prev) =>
-      prev.map((conversation) => {
-        if (getConversationId(conversation) !== selectedConversationId) {
-          return conversation;
-        }
+      sortConversationsByLastActivity(
+        prev.map((conversation) => {
+          if (getConversationId(conversation) !== selectedConversationId) {
+            return conversation;
+          }
 
-        return updateConversationStatus(conversation, status, updatedListing);
-      })
+          return updateConversationStatus(conversation, status, updatedListing);
+        })
+      )
     );
   };
 
@@ -849,6 +1007,11 @@ const Messages = () => {
                   const conversationId = getConversationId(conversation);
                   const active = conversationId === selectedConversationId;
                   const status = getListingStatus(conversation);
+                  const unread = hasUnreadMessage(
+                    conversation,
+                    currentUserId,
+                    selectedConversationId
+                  );
 
                   return (
                     <button
@@ -860,11 +1023,31 @@ const Messages = () => {
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="font-semibold truncate">
-                            {getOtherUserName(conversation, currentUserId)}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p
+                              className={`truncate ${
+                                unread ? "font-bold" : "font-semibold"
+                              }`}
+                            >
+                              {getOtherUserName(conversation, currentUserId)}
+                            </p>
+
+                            {unread && (
+                              <span
+                                className="h-2.5 w-2.5 rounded-full bg-red-500 shrink-0"
+                                title="Unread message"
+                              />
+                            )}
+                          </div>
+
+                          <p
+                            className={`text-xs truncate ${
+                              unread
+                                ? "font-semibold text-foreground"
+                                : "text-muted-foreground"
+                            }`}
+                          >
                             {getListingTitle(conversation)}
                           </p>
                         </div>
