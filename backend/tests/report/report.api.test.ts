@@ -49,7 +49,17 @@ async function registerVerifyAndLogin(
   };
 }
 
-async function createListingForUser(token: string, overrides: Partial<any> = {}) {
+// helper to create a real category row for listing creation
+async function createCategory(name = "Clothing") {
+  const result = await AppDataSource.query(
+    `INSERT INTO "category_entity" ("name") VALUES ($1) RETURNING "categoryId", "name"`,
+    [name]
+  );
+
+  return result[0];
+}
+
+async function createListingForUser(token: string, categoryIds: string[],overrides: Partial<any> = {}) {
   const res = await request(app)
     .post("/api/listings")
     .set("Authorization", `Bearer ${token}`)
@@ -83,7 +93,11 @@ describe("Report API", () => {
     await AppDataSource.query(`DELETE FROM "favorite"`);
     await AppDataSource.query(`DELETE FROM "block"`);
     await AppDataSource.query(`DELETE FROM "listing_image"`);
+    // clear listing-category join table before listings/categories
+    await AppDataSource.query(`DELETE FROM "listing_categories_category_entity"`);
     await AppDataSource.query(`DELETE FROM "listing"`);
+    // clear categories too since listing creation now depends on them
+    await AppDataSource.query(`DELETE FROM "category_entity"`);
     await AppDataSource.query(`DELETE FROM "user"`);
   });
 
