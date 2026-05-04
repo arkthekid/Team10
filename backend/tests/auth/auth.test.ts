@@ -1,8 +1,6 @@
 import request from "supertest";
 import { createApp } from "../../src/app";
 import { AppDataSource } from "../../src/config/data-source";
-import { User } from "../../src/entities/User";
-import { Listing } from "../../src/entities/Listing";
 
 jest.mock("../../src/services/emailService", () => ({
   sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
@@ -10,7 +8,8 @@ jest.mock("../../src/services/emailService", () => ({
 
 const app = createApp();
 
-const uniqueEmail = () => `amoemyint+${Date.now()}-${Math.floor(Math.random() * 10000)}@umass.edu`;
+const uniqueEmail = () =>
+  `amoemyint+${Date.now()}-${Math.floor(Math.random() * 10000)}@umass.edu`;
 
 async function registerAndVerify(email = uniqueEmail()) {
   const res = await request(app).post("/api/auth/register").send({
@@ -23,7 +22,7 @@ async function registerAndVerify(email = uniqueEmail()) {
 
   await AppDataSource.query(
     `UPDATE "user" SET "isVerified" = true WHERE "umassEmail" = $1`,
-    [email]
+    [email],
   );
 
   return { email };
@@ -41,6 +40,7 @@ describe("Auth", () => {
     await AppDataSource.query(`DELETE FROM "conversation"`);
     await AppDataSource.query(`DELETE FROM "favorite"`);
     await AppDataSource.query(`DELETE FROM "block"`);
+    await AppDataSource.query(`DELETE FROM "listing_image"`);
     await AppDataSource.query(`DELETE FROM "listing"`);
     await AppDataSource.query(`DELETE FROM "user"`);
   });
