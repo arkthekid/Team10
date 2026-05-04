@@ -123,20 +123,8 @@ describe("Auth API", () => {
     expect(res.body.message).toMatch(/at least 8 characters/i);
   });
 
-  it("POST /api/auth/login returns token + user for verified user", async () => {
-    const { email } = await registerAndVerify(uniqueEmail(), "Login User");
-
-    const loginRes = await request(app).post("/api/auth/login").send({
-      umassEmail: email,
-      password: "Test1234!",
-    });
-
-    expect(loginRes.status).toBe(200);
-    expect(loginRes.body.token).toBeTruthy();
-    expect(loginRes.body.user).toBeTruthy();
-    expect(loginRes.body.user.name).toBe("Login User");
-    expect(loginRes.body.user.umassEmail).toBe(email);
-    expect(loginRes.body.user.role).toBe("user");
+  it.skip("POST /api/auth/login returns token + user for verified user", async () => {
+  // Skipped: email/password login removed, Google OAuth only
   });
 
   it("POST /api/auth/login rejects unverified user", async () => {
