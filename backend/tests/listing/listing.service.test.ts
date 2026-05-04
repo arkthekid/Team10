@@ -10,6 +10,10 @@ jest.mock("../../src/config/data-source", () => ({
   },
 }));
 
+jest.mock("../../src/services/blockService", () => ({
+  getBlockerIdsForUser: jest.fn().mockResolvedValue([]),
+}));
+
 describe("listingService", () => {
   const mockListingRepo = {
     create: jest.fn(),
@@ -252,7 +256,7 @@ describe("listingService", () => {
 
       mockListingRepo.createQueryBuilder.mockReturnValue(mockQb);
 
-      const result = await listingService.getListings({});
+      const result = await listingService.getListings({}, "");
 
       expect(mockQb.orderBy).toHaveBeenCalledWith("listing.createdAt", "DESC");
       expect(mockQb.skip).toHaveBeenCalledWith(0);
@@ -271,7 +275,7 @@ describe("listingService", () => {
       };
       mockListingRepo.createQueryBuilder.mockReturnValue(mockQb);
 
-      await listingService.getListings({ category: "furniture" });
+      await listingService.getListings({ category: "furniture" }, "");
 
       expect(mockQb.where).toHaveBeenCalledWith("listing.category = :category", { category: "furniture" });
     });
@@ -287,7 +291,7 @@ describe("listingService", () => {
       };
       mockListingRepo.createQueryBuilder.mockReturnValue(mockQb);
 
-      await listingService.getListings({ minPrice: 50, maxPrice: 200 });
+      await listingService.getListings({ minPrice: 50, maxPrice: 200 }, "");
 
       expect(mockQb.andWhere).toHaveBeenCalledWith("listing.price >= :minPrice", { minPrice: 50 });
       expect(mockQb.andWhere).toHaveBeenCalledWith("listing.price <= :maxPrice", { maxPrice: 200 });
@@ -304,7 +308,7 @@ describe("listingService", () => {
       };
       mockListingRepo.createQueryBuilder.mockReturnValue(mockQb);
 
-      await listingService.getListings({ search: "desk" });
+      await listingService.getListings({ search: "desk" }, "");
 
       expect(mockQb.andWhere).toHaveBeenCalledWith(
         "listing.name ILIKE :search OR listing.description ILIKE :search",
@@ -323,7 +327,7 @@ describe("listingService", () => {
       };
       mockListingRepo.createQueryBuilder.mockReturnValue(mockQb);
 
-      await listingService.getListings({ sortBy: "price", order: "ASC", page: 2, limit: 5 });
+      await listingService.getListings({ sortBy: "price", order: "ASC", page: 2, limit: 5 }, "");
 
       expect(mockQb.orderBy).toHaveBeenCalledWith("listing.price", "ASC");
       expect(mockQb.skip).toHaveBeenCalledWith(5);
@@ -341,7 +345,7 @@ describe("listingService", () => {
       };
       mockListingRepo.createQueryBuilder.mockReturnValue(mockQb);
 
-      await expect(listingService.getListings({})).rejects.toThrow("Query failed");
+      await expect(listingService.getListings({}, "")).rejects.toThrow("Query failed");
     });
   });
 

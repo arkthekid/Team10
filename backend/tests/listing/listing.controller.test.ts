@@ -124,7 +124,7 @@ describe("listingController", () => {
         order: "DESC",
         page: 1,
         limit: 10,
-      });
+      }, "");
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockListings);
     });
@@ -151,7 +151,7 @@ describe("listingController", () => {
         order: "DESC",
         page: 1,
         limit: 10,
-      });
+      }, "");
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockListings);
     });
@@ -182,7 +182,7 @@ describe("listingController", () => {
         maxPrice: 200,
         page: 2,
         limit: 5,
-      });
+      }, "");
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockListings);
     });
@@ -203,7 +203,7 @@ describe("listingController", () => {
         order: "DESC",
         page: 3,
         limit: 2,
-      });
+      }, "");
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(mockListings);
     });
@@ -224,7 +224,7 @@ describe("listingController", () => {
         page: 1,
         limit: 10,
         minPrice: 75,
-      });
+      }, "");
     });
   });
 
