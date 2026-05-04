@@ -118,46 +118,16 @@ describe("Auth", () => {
     expect(res.body.message).toBeTruthy();
   });
 
-  it("POST /api/auth/login returns token for verified user", async () => {
-    const { email } = await registerAndVerify();
-
-    const res = await request(app).post("/api/auth/login").send({
-      umassEmail: email,
-      password: "Test1234!",
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.body.token).toBeTruthy();
-    expect(res.body.user.umassEmail).toBe(email);
+  it.skip("POST /api/auth/login returns token for verified user", async () => {
+  // Skipped: email/password login removed, Google OAuth only
   });
 
-  it("POST /api/auth/login rejects unverified user", async () => {
-    const email = uniqueEmail();
-    await request(app).post("/api/auth/register").send({
-      name: "Arkar",
-      umassEmail: email,
-      password: "Test1234!",
-    });
-
-    const res = await request(app).post("/api/auth/login").send({
-      umassEmail: email,
-      password: "Test1234!",
-    });
-
-    expect(res.status).toBe(403);
-    expect(res.body.message).toMatch(/verify your email/i);
+  it.skip("POST /api/auth/login rejects unverified user", async () => {
+  // Skipped: email/password login removed, Google OAuth only
   });
 
-  it("POST /api/auth/login wrong password fails", async () => {
-    const { email } = await registerAndVerify();
-
-    const res = await request(app).post("/api/auth/login").send({
-      umassEmail: email,
-      password: "WrongPassword!",
-    });
-
-    expect(res.status).toBe(401);
-    expect(res.body.message).toBeTruthy();
+  it.skip("POST /api/auth/login wrong password fails", async () => {
+  // Skipped: email/password login removed, Google OAuth only
   });
 
   it("POST /api/auth/login rejects missing fields", async () => {
@@ -180,24 +150,8 @@ describe("Auth", () => {
     expect(res.body.message).toBeTruthy();
   });
 
-  it("GET /api/auth/me returns current user", async () => {
-    const { email } = await registerAndVerify();
-
-    const loginRes = await request(app).post("/api/auth/login").send({
-      umassEmail: email,
-      password: "Test1234!",
-    });
-
-    const token = loginRes.body.token;
-
-    const res = await request(app)
-      .get("/api/auth/me")
-      .set("Authorization", `Bearer ${token}`);
-
-    expect(res.status).toBe(200);
-    expect(res.body.id).toBeTruthy();
-    expect(res.body.email).toBe(email);
-    expect(res.body.role).toBe("user");
+  it.skip("GET /api/auth/me returns current user", async () => {
+    // Skipped: depends on email/password login which is removed
   });
 
   it("GET /api/auth/me rejects missing token", async () => {
