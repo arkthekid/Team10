@@ -3,6 +3,7 @@ import { AppDataSource } from "../../src/config/data-source";
 import { Conversation } from "../../src/entities/Conversation";
 import { Listing } from "../../src/entities/Listing";
 import { AppError } from "../../src/utils/AppError";
+import { Block } from "../../src/entities/Block";
 
 jest.mock("../../src/config/data-source", () => ({
   AppDataSource: {
@@ -23,11 +24,21 @@ describe("conversationService", () => {
     findOne: jest.fn(),
   };
 
+  const mockBlockRepo = {
+    findOne: jest.fn(),
+    find: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+
+    mockBlockRepo.findOne.mockResolvedValue(null);
+    mockBlockRepo.find.mockResolvedValue([]);
+
     (AppDataSource.getRepository as jest.Mock).mockImplementation((entity) => {
       if (entity === Conversation) return mockConversationRepo;
       if (entity === Listing) return mockListingRepo;
+      if (entity === Block) return mockBlockRepo;
     });
   });
 
