@@ -84,6 +84,18 @@ const getListingLocation = (listing: any) => {
   );
 };
 
+const getListingStatus = (listing: any) => {
+  const status = String(listing?.status || "available").toLowerCase();
+
+  if (status === "sold_pending" || status === "pending") return "sold_pending";
+
+  if (status === "completed" || status === "complete" || status === "sold") {
+    return "completed";
+  }
+
+  return "available";
+};
+
 const getListingUpdatedTime = (listing: any) => {
   const dateValue =
     listing.updatedAt ||
@@ -201,7 +213,9 @@ const Browse = () => {
           ""
       );
 
-      return !blockedUserIds.includes(sellerId);
+      const status = getListingStatus(listing);
+
+      return !blockedUserIds.includes(sellerId) && status !== "completed";
     });
   }, [listings, blockedUserIds]);
 
