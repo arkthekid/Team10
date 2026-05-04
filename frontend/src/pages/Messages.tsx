@@ -746,21 +746,6 @@ const Messages = () => {
                   );
                 })}
 
-                {selectedConversation && listingId && (
-                  <button
-                    type="button"
-                    className="w-full text-left p-4 bg-muted"
-                    onClick={() => setSelectedConversation(selectedConversation)}
-                  >
-                    <p className="font-semibold truncate">
-                      {conversationTitle}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {listingLabel}
-                    </p>
-                  </button>
-                )}
-
                 {conversations.map((conversation) => {
                   const conversationId = getConversationId(conversation);
                   const active = conversationId === selectedConversationId;
@@ -771,8 +756,8 @@ const Messages = () => {
                       type="button"
                       key={conversationId}
                       onClick={() => setSelectedConversation(conversation)}
-                      className={`w-full text-left p-4 hover:bg-muted ${
-                        active ? "bg-muted" : ""
+                      className={`w-full text-left p-4 hover:bg-muted transition-colors ${
+                        active ? "bg-gray-200 border-l-4 border-primary" : ""
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
