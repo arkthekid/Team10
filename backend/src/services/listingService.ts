@@ -26,6 +26,8 @@ export async function getListings(query: GetListingDto, currentUserId: string) {
   const repo = AppDataSource.getRepository(Listing);
   const qb = repo.createQueryBuilder("listing");
 
+  qb.leftJoinAndSelect("listing.pickUpLocation", "pickUpLocation");
+
   if (query.category) {
     qb.where("listing.category = :category", {
       category: query.category,
@@ -79,7 +81,7 @@ export async function getListingById(id: string) {
 
   const listing = await repo.findOne({
     where: { listingId: id },
-    relations: ["seller", "categories", "images"]
+    relations: ["seller", "categories", "images", "pickUpLocation"]
   });
 
   if (!listing) throw new AppError("Listing not found", 404);
@@ -101,7 +103,7 @@ export async function getListingById(id: string) {
     sellerName: listing.seller.name,
     createdAt: listing.createdAt,
     updatedAt: listing.updatedAt,
-    pickUpLocation: listing.pickUpLocation,
+    pickUpLocation: listing.pickUpLocation.name,
     cntInterestedUser: cntConversation,
   }
 }
