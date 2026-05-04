@@ -66,10 +66,10 @@ export async function getListings(query: GetListingDto, currentUserId: string) {
     query.order || "DESC"
   );
 
-  const page = query.page || 1;
-  const limit = query.limit || 10;
+  // const page = query.page || 1;
+  // const limit = query.limit || 9;
 
-  qb.skip((page - 1) * limit).take(limit);
+  // qb.skip((page - 1) * limit).take(limit);
 
   return await qb.getMany();
 }
