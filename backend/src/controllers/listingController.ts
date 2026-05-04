@@ -9,7 +9,7 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
     const userId = getUserId(req);
     const { categoryIds, ...data } = req.body;
 
-    const newListing = await listingService.createListing(req.body, categoryIds, userId);
+    const newListing = await listingService.createListing(data, categoryIds, userId);
 
     res.status(201).json(newListing);
   } catch (error) {
@@ -20,18 +20,23 @@ export const createListing = async (req: Request, res: Response, next: NextFunct
 
 export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: Response, next: NextFunction) => {
   try {
-    const userId = getUserId(req as Request);
-
     const {
       search,
-      category, // can be undefined
-      sortBy = "createdAt", // if sortBy is undefined → use "createdAt"
-      order = "DESC", // if order is undefined → use "DESC"
+      category,
+      sortBy = "createdAt",
+      order = "DESC",
       minPrice,
       maxPrice,
       page = 1,
       limit = 10,
     } = req.query;
+
+    let currentUserId = "";
+    try {
+      currentUserId = getUserId(req as any);
+    } catch {
+      currentUserId = "";
+    }
 
     const listings = await listingService.getListings({
       sortBy,
@@ -40,7 +45,7 @@ export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: 
       limit: Number(limit),
 
       ...(search && { search }),
-      ...(category && { category }), // only add if it is undefined
+      ...(category && { category }),
 
       ...(minPrice !== undefined && {
         minPrice: Number(minPrice),
@@ -49,9 +54,7 @@ export const getListings = async (req: Request<{}, {}, {}, GetListingDto>, res: 
       ...(maxPrice !== undefined && {
         maxPrice: Number(maxPrice),
       }),
-      }, 
-      userId
-    );
+    }, currentUserId);
 
     res.status(200).json(listings);
   } catch (error) {
