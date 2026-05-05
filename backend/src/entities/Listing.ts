@@ -10,7 +10,6 @@ import {
   ManyToMany,
   OneToMany
 } from "typeorm";
-import { Category } from "../constants/categories";
 import { User } from "./User";
 import { Conversation } from "./Conversation";
 import { CategoryEntity } from "./Category";
@@ -47,6 +46,12 @@ export class Listing {
 
   @Column({ type: "text", nullable: true })
   pickUpLocationId!: string | null;
+
+  @Column({ type: "text", nullable: true })
+  pickUpLocationText!: string | null;
+
+  @Column({ type: "text", nullable: true })
+  category!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;
