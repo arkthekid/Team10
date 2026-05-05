@@ -30,8 +30,18 @@ describe("Google OAuth API", () => {
   });
 
   beforeEach(async () => {
-    await AppDataSource.createQueryBuilder().delete().from(Listing).execute();
-    await AppDataSource.createQueryBuilder().delete().from(User).execute();
+    await AppDataSource.query(`DELETE FROM "message"`);
+    await AppDataSource.query(`DELETE FROM "conversation"`);
+    await AppDataSource.query(`DELETE FROM "report"`);
+    await AppDataSource.query(`DELETE FROM "review"`);
+    await AppDataSource.query(`DELETE FROM "favorite"`);
+    await AppDataSource.query(`DELETE FROM "block"`);
+    await AppDataSource.query(
+      `DELETE FROM "listing_categories_category_entity"`,
+    );
+    await AppDataSource.query(`DELETE FROM "listing_image"`);
+    await AppDataSource.query(`DELETE FROM "listing"`);
+    await AppDataSource.query(`DELETE FROM "user"`);
     jest.clearAllMocks();
   });
 
@@ -78,9 +88,7 @@ describe("Google OAuth API", () => {
 
   // Error case - missing token
   it("POST /api/auth/google returns 400 when idToken is missing", async () => {
-    const res = await request(app)
-      .post("/api/auth/google")
-      .send({});
+    const res = await request(app).post("/api/auth/google").send({});
 
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/Google ID token is required/i);
@@ -90,7 +98,7 @@ describe("Google OAuth API", () => {
   it("POST /api/auth/google returns 403 for non-umass email", async () => {
     const { AppError } = await import("../../src/utils/AppError");
     mockGoogleLogin.mockRejectedValue(
-      new AppError("Must use a @umass.edu Google account", 403)
+      new AppError("Must use a @umass.edu Google account", 403),
     );
 
     const res = await request(app)
@@ -105,7 +113,7 @@ describe("Google OAuth API", () => {
   it("POST /api/auth/google returns 401 for invalid Google token", async () => {
     const { AppError } = await import("../../src/utils/AppError");
     mockGoogleLogin.mockRejectedValue(
-      new AppError("Invalid Google token", 401)
+      new AppError("Invalid Google token", 401),
     );
 
     const res = await request(app)
@@ -120,7 +128,7 @@ describe("Google OAuth API", () => {
   it("POST /api/auth/google returns 401 when Google payload is null", async () => {
     const { AppError } = await import("../../src/utils/AppError");
     mockGoogleLogin.mockRejectedValue(
-      new AppError("Invalid Google token", 401)
+      new AppError("Invalid Google token", 401),
     );
 
     const res = await request(app)
