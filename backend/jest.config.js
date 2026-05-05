@@ -11,4 +11,8 @@ module.exports = {
   transformIgnorePatterns: [
     "node_modules/(?!(uuid)/)"
   ],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    ".*\\.api\\.test\\.ts$",
+  ],
 };
