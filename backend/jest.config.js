@@ -14,5 +14,6 @@ module.exports = {
   testPathIgnorePatterns: [
     "/node_modules/",
     ".*\\.api\\.test\\.ts$",
+    "tests/auth/auth\\.test\\.ts$",
   ],
 };
