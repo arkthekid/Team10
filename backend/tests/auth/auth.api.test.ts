@@ -24,7 +24,7 @@ async function registerAndVerify(email = uniqueEmail(), name = "Test User") {
 
   await AppDataSource.query(
     `UPDATE "user" SET "isVerified" = true WHERE "umassEmail" = $1`,
-    [email]
+    [email],
   );
 
   return { email, name };
@@ -40,8 +40,14 @@ describe("Auth API", () => {
   beforeEach(async () => {
     await AppDataSource.query(`DELETE FROM "message"`);
     await AppDataSource.query(`DELETE FROM "conversation"`);
+    await AppDataSource.query(`DELETE FROM "report"`);
+    await AppDataSource.query(`DELETE FROM "review"`);
     await AppDataSource.query(`DELETE FROM "favorite"`);
     await AppDataSource.query(`DELETE FROM "block"`);
+    await AppDataSource.query(
+      `DELETE FROM "listing_categories_category_entity"`,
+    );
+    await AppDataSource.query(`DELETE FROM "listing_image"`);
     await AppDataSource.query(`DELETE FROM "listing"`);
     await AppDataSource.query(`DELETE FROM "user"`);
   });
@@ -124,7 +130,7 @@ describe("Auth API", () => {
   });
 
   it.skip("POST /api/auth/login returns token + user for verified user", async () => {
-  // Skipped: email/password login removed, Google OAuth only
+    // Skipped: email/password login removed, Google OAuth only
   });
 
   it("POST /api/auth/login rejects unverified user", async () => {
@@ -180,10 +186,12 @@ describe("Auth API", () => {
     const email = uniqueEmail().toLowerCase();
     await registerAndVerify(email, "Case User");
 
-    const res = await request(app).post("/api/auth/login").send({
-      umassEmail: `  ${email.toUpperCase()}  `,
-      password: "Test1234!",
-    });
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({
+        umassEmail: `  ${email.toUpperCase()}  `,
+        password: "Test1234!",
+      });
 
     expect(res.status).toBe(200);
     expect(res.body.user.umassEmail).toBe(email);
